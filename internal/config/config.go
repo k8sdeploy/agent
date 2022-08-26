@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	Local
+	K8sDeploy
 }
 
 func Build() (*Config, error) {
@@ -15,8 +16,10 @@ func Build() (*Config, error) {
 	if err := env.Parse(cfg); err != nil {
 		return nil, bugLog.Error(err)
 	}
-
 	if err := BuildLocal(cfg); err != nil {
+		return nil, bugLog.Error(err)
+	}
+	if err := BuildK8sDeploy(cfg); err != nil {
 		return nil, bugLog.Error(err)
 	}
 

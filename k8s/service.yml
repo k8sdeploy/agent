@@ -6,6 +6,20 @@ metadata:
   name: k8sdeploy-agent
 
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8sdeploy-agent
+subjects:
+  - kind: ServiceAccount
+    name: k8sdeploy-agent
+    namespace: k8sdeploy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,8 +45,6 @@ spec:
       serviceAccountName: k8sdeploy-agent
       imagePullSecrets:
         - name: regcred
-      nodeSelector:
-        kubernetes.io/arch: amd64
       containers:
         - name: agent
           image: containers.chewedfeed.com/k8sdeploy/agent:latest
@@ -50,20 +62,3 @@ spec:
             - name: SERVICE_NAME
               value: agent
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: agent
-  namespace: k8sdeploy
-  labels:
-    app: agent
-    name: agent
-spec:
-  ports:
-    - port: 3000
-      protocol: TCP
-      targetPort: 3000
-      name: http
-  selector:
-    app: agent

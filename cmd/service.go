@@ -29,7 +29,7 @@ func main() {
 	}
 
 	if err := s.Start(); err != nil {
-		_ = bugLog.Errorf("start service: %v", err)
+		_ = bugLog.Errorf("service: %v", err)
 		return
 	}
 }
