@@ -52,4 +52,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           push: true
           build-args: SERVICE_NAME=agent,VERSION=${{ github.ref_name }},BUILD=${{ github.sha }}
+      - name: Deploy
+        uses: k8sdeploy/github-action@v1
+        with:
+          service-namespace: k8sdeploy
+          service-name: agent
+          k8sdeploy-key: ${{ secrets.K8SDEPLOY_KEY }}
+          k8sdeploy-secret: ${{ secrets.K8SDEPLOY_SECRET }}
+          image-hash: ${{ github.sha }}
+          image-tag: ${{ github.ref_name }}
 
