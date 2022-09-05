@@ -38,7 +38,7 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: containers.chewedfeed.com
-          username: robot$github
+          username: robot$k8sdeploy
           password: ${{ secrets.CONTAINERS_KEY }}
       - name: Build and Push
         id: docker_build
@@ -59,6 +59,7 @@ jobs:
           service-name: agent
           k8sdeploy-key: ${{ secrets.K8SDEPLOY_KEY }}
           k8sdeploy-secret: ${{ secrets.K8SDEPLOY_SECRET }}
+          k8sdeploy-id: ${{ secrets.K8SDEPLOY_ID }}
           image-hash: ${{ github.sha }}
           image-tag: ${{ github.ref_name }}
 

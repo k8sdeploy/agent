@@ -109,7 +109,6 @@ func (a *Agent) connectOrchestrator() error {
 		}
 	}()
 	var resp orchestratorResponse
-	//var i interface{}
 	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
 		return err
 	}
