@@ -33,7 +33,7 @@ const (
 
 //nolint:gocyclo
 func (a *Agent) listenForSelfUpdate(errChan chan error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s?limit=1", a.SelfUpdate.EventChannel), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/application/%s/message?limit=1", a.Config.K8sDeploy.SocketAddress, a.SelfUpdate.EventChannel), nil)
 	if err != nil {
 		errChan <- err
 		return
