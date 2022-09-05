@@ -47,7 +47,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           builder: ${{ steps.buildx.outputs.name }}
-          file: ./k8s/Dockerfile
+          file: ./k8s/Containerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           push: true
