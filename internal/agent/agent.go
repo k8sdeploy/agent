@@ -33,7 +33,7 @@ type EventClient struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
 	Token        string `json:"token"`
-	EventChannel string
+	EventChannel string `json:"channel"`
 }
 
 func NewAgent(cfg *config.Config) *Agent {
