@@ -34,7 +34,7 @@ const (
 //nolint:gocyclo
 func (a *Agent) listenForSelfUpdate(errChan chan error) {
 	channel := fmt.Sprintf("%s/application/%s/message?limit=1", a.Config.K8sDeploy.SocketAddress, a.SelfUpdate.ID)
-	fmt.Printf("self-update channel %s\n", channel)
+	// fmt.Printf("self-update channel %s\n", channel)
 
 	req, err := http.NewRequest("GET", channel, nil)
 	if err != nil {
@@ -42,7 +42,7 @@ func (a *Agent) listenForSelfUpdate(errChan chan error) {
 		return
 	}
 	req.Header.Set("X-Gotify-Key", a.SelfUpdate.Token)
-	fmt.Printf("self-update token %s\n", a.SelfUpdate.Token)
+	// fmt.Printf("self-update token %s\n", a.SelfUpdate.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		errChan <- err
@@ -98,7 +98,7 @@ func (a *Agent) listenForSelfUpdate(errChan chan error) {
 //nolint:gocyclo
 func (a *Agent) listenForEvents(errChan chan error) {
 	channel := fmt.Sprintf("%s/application/%s/message?limit=1", a.Config.K8sDeploy.SocketAddress, a.EventClient.ID)
-	fmt.Printf("events channel %s\n", channel)
+	// fmt.Printf("events channel %s\n", channel)
 
 	req, err := http.NewRequest("GET", channel, nil)
 	if err != nil {
@@ -106,7 +106,7 @@ func (a *Agent) listenForEvents(errChan chan error) {
 		return
 	}
 	req.Header.Set("X-Gotify-Key", a.EventClient.Token)
-	fmt.Printf("events token %s\n", a.EventClient.Token)
+	// fmt.Printf("events token %s\n", a.EventClient.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		errChan <- err
