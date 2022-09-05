@@ -118,7 +118,7 @@ func (a *Agent) listenForEvents(errChan chan error) {
 		}
 	}()
 	if res.StatusCode != http.StatusOK {
-		errChan <- fmt.Errorf("failed get service keys: %s", res.Status)
+		errChan <- fmt.Errorf("failed get service keys events: %s", res.Status)
 		return
 	}
 
@@ -178,7 +178,7 @@ func (a *Agent) deleteMessage(messageID int, errChan chan error) {
 		}
 	}()
 	if res.StatusCode != http.StatusOK {
-		errChan <- fmt.Errorf("failed get service keys: %s", res.Status)
+		errChan <- fmt.Errorf("failed get service keys delete: %s", res.Status)
 		return
 	}
 }
