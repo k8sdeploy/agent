@@ -30,7 +30,7 @@ type Agent struct {
 }
 
 type EventClient struct {
-	ID           int    `json:"id"`
+	ID           string `json:"id"`
 	Name         string `json:"name"`
 	Token        string `json:"token"`
 	EventChannel string
@@ -94,11 +94,14 @@ func (a *Agent) connectOrchestrator() error {
 		return errors.New("failed to connect to orchestrator")
 	}
 
+	type AgentChannelDetails struct {
+		Token   string `json:"token"`
+		Channel string `json:"channel"`
+	}
+
 	type orchestratorResponse struct {
-		UpdateToken   string `json:"update_token"`
-		UpdateChannel int    `json:"update_channel"`
-		EventToken    string `json:"event_token"`
-		EventChannel  int    `json:"event_channel"`
+		Update AgentChannelDetails `json:"update"`
+		Event  AgentChannelDetails `json:"event"`
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
@@ -106,17 +109,18 @@ func (a *Agent) connectOrchestrator() error {
 		}
 	}()
 	var resp orchestratorResponse
+	//var i interface{}
 	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
 		return err
 	}
 	a.EventClient = &EventClient{
-		ID:    resp.EventChannel,
-		Token: resp.EventToken,
+		ID:    resp.Event.Channel,
+		Token: resp.Event.Token,
 		Name:  "eventChannel",
 	}
 	a.SelfUpdate = &EventClient{
-		ID:    resp.UpdateChannel,
-		Token: resp.UpdateToken,
+		ID:    resp.Update.Channel,
+		Token: resp.Update.Token,
 		Name:  "updateChannel",
 	}
 
