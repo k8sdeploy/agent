@@ -42,6 +42,7 @@ func (a *Agent) listenForSelfUpdate(errChan chan error) {
 		return
 	}
 	req.Header.Set("X-Gotify-Key", a.SelfUpdate.Token)
+	fmt.Printf("self-update token %s\n", a.SelfUpdate.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		errChan <- err
@@ -105,6 +106,7 @@ func (a *Agent) listenForEvents(errChan chan error) {
 		return
 	}
 	req.Header.Set("X-Gotify-Key", a.EventClient.Token)
+	fmt.Printf("events token %s\n", a.EventClient.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		errChan <- err
