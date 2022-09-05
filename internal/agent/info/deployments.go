@@ -3,10 +3,13 @@ package info
 import (
 	"context"
 	"fmt"
+
 	"k8s.io/client-go/kubernetes"
 )
 
-const DEPLOYMENTS_REQUEST_TYPE = "deployments"
+const (
+	deploymentsRequestType = "deployments"
+)
 
 type DeploymentsRequest struct {
 	Namespace string `json:"namespace"`

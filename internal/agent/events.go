@@ -3,9 +3,10 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/k8sdeploy/agent/internal/agent/deploy"
 	"github.com/k8sdeploy/agent/internal/agent/info"
-	"net/http"
 )
 
 type Message struct {
@@ -26,12 +27,73 @@ type Paging struct {
 }
 
 const (
-	MESSAGE_TYPE_DEPLOY = "deploy"
-	MESSAGE_TYPE_INFO   = "info"
+	messageTypeDeploy = "deploy"
+	messageTypeInfo   = "info"
 )
 
+//nolint:gocyclo
+func (a *Agent) listenForSelfUpdate(errChan chan error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s?limit=1", a.SelfUpdate.EventChannel), nil)
+	if err != nil {
+		errChan <- err
+		return
+	}
+	req.Header.Set("X-Gotify-Key", a.SelfUpdate.Token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		errChan <- err
+		return
+	}
+
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			fmt.Printf("Error: %s\n", err)
+		}
+	}()
+
+	if res.StatusCode != http.StatusOK {
+		errChan <- fmt.Errorf("failed get updates: %s", res.Status)
+		return
+	}
+
+	type messages struct {
+		Messages []Message `json:"messages"`
+		Paging   Paging    `json:"paging"`
+	}
+	var m messages
+	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
+		errChan <- err
+		return
+	}
+
+	type message struct {
+		Version string `json:"version"`
+	}
+
+	if len(m.Messages) >= 1 {
+		if m.Messages[0].Title == "update" {
+			var msg message
+			if err := json.Unmarshal([]byte(m.Messages[0].Message), &msg); err != nil {
+				errChan <- err
+			}
+
+			switch a.Config.Local.BuildVersion {
+			case "dev":
+				return
+			case "latest":
+				return
+			case msg.Version:
+				return
+			}
+
+			errChan <- deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).DeployImage(m.Messages[0].Message)
+		}
+	}
+}
+
+//nolint:gocyclo
 func (a *Agent) listenForEvents(errChan chan error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s?limit=1", a.EventClient.EventChannel), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/application/%s/message?limit=1", a.Config.K8sDeploy.SocketAddress, a.EventClient.EventChannel), nil)
 	if err != nil {
 		errChan <- err
 		return
@@ -42,6 +104,11 @@ func (a *Agent) listenForEvents(errChan chan error) {
 		errChan <- err
 		return
 	}
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			fmt.Printf("Error: %s\n", err)
+		}
+	}()
 	if res.StatusCode != http.StatusOK {
 		errChan <- fmt.Errorf("failed get service keys: %s", res.Status)
 		return
@@ -63,10 +130,10 @@ func (a *Agent) listenForEvents(errChan chan error) {
 		messageParsed := false
 
 		switch m.Messages[0].Title {
-		case MESSAGE_TYPE_DEPLOY:
+		case messageTypeDeploy:
 			messageErr = deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).DeployImage(m.Messages[0].Message)
 			messageParsed = true
-		case MESSAGE_TYPE_INFO:
+		case messageTypeInfo:
 			messageErr = info.NewInfo(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).ParseInfoRequest(m.Messages[0].Message)
 			messageParsed = true
 		default:
@@ -85,8 +152,8 @@ func (a *Agent) listenForEvents(errChan chan error) {
 	errChan <- messageErr
 }
 
-func (a *Agent) deleteMessage(messageId int, errChan chan error) {
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/message/%d", a.Config.K8sDeploy.SocketAddress, messageId), nil)
+func (a *Agent) deleteMessage(messageID int, errChan chan error) {
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/message/%d", a.Config.K8sDeploy.SocketAddress, messageID), nil)
 	if err != nil {
 		errChan <- err
 		return
@@ -97,6 +164,11 @@ func (a *Agent) deleteMessage(messageId int, errChan chan error) {
 		errChan <- err
 		return
 	}
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			fmt.Printf("Error: %s\n", err)
+		}
+	}()
 	if res.StatusCode != http.StatusOK {
 		errChan <- fmt.Errorf("failed get service keys: %s", res.Status)
 		return

@@ -2,13 +2,15 @@ package service
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	bugLog "github.com/bugfixes/go-bugfixes/logs"
 	"github.com/go-chi/chi/v5"
 	"github.com/k8sdeploy/agent/internal/agent"
 	"github.com/k8sdeploy/agent/internal/config"
 	"github.com/keloran/go-healthcheck"
 	"github.com/keloran/go-probe"
-	"net/http"
 )
 
 type Service struct {
@@ -32,7 +34,15 @@ func startHealth(cfg *config.Config, errChan chan error) {
 	r := chi.NewRouter()
 	r.Get("/health", healthcheck.HTTP)
 	r.Get("/probe", probe.HTTP)
-	if err := http.ListenAndServe(p, r); err != nil {
+
+	srv := &http.Server{
+		Addr:              p,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		errChan <- err
 	}
 }

@@ -18,7 +18,7 @@ func main() {
 	bugLog.Local().Info(fmt.Sprintf("Starting %s", ServiceName))
 	bugLog.Local().Info(fmt.Sprintf("Version: %s, Hash: %s", BuildVersion, BuildHash))
 
-	cfg, err := config.Build()
+	cfg, err := config.Build(BuildVersion)
 	if err != nil {
 		_ = bugLog.Errorf("config: %v", err)
 		return

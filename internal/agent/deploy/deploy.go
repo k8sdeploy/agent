@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -58,6 +59,7 @@ func (d *Deployment) DeployImage(deploymentInfo string) error {
 	for _, dep := range list.Items {
 		if dep.ObjectMeta.Name == di.Name {
 			dep.Spec.Template.Spec.Containers[0].Image = di.ImageURL
+			//nolint:gosec
 			_, err := deps.Update(d.Context, &dep, metav1.UpdateOptions{})
 			if err != nil {
 				return err

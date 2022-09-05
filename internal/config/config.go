@@ -10,13 +10,13 @@ type Config struct {
 	K8sDeploy
 }
 
-func Build() (*Config, error) {
+func Build(buildVersion string) (*Config, error) {
 	cfg := &Config{}
 
 	if err := env.Parse(cfg); err != nil {
 		return nil, bugLog.Error(err)
 	}
-	if err := BuildLocal(cfg); err != nil {
+	if err := BuildLocal(buildVersion, cfg); err != nil {
 		return nil, bugLog.Error(err)
 	}
 	if err := BuildK8sDeploy(cfg); err != nil {

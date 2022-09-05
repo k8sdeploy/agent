@@ -1,15 +1,20 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"path/filepath"
+	"time"
+
 	"github.com/k8sdeploy/agent/internal/config"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-	"path/filepath"
-	"time"
 )
 
 type KubernetesClient struct {
@@ -20,6 +25,7 @@ type KubernetesClient struct {
 type Agent struct {
 	Config           *config.Config
 	EventClient      *EventClient
+	SelfUpdate       *EventClient
 	KubernetesClient *KubernetesClient
 }
 
@@ -50,6 +56,11 @@ func (a *Agent) Start() error {
 		time.Sleep(10 * time.Second)
 
 		go a.listenForEvents(errChan)
+
+		if a.Config.SelfUpdate {
+			go a.listenForSelfUpdate(errChan)
+		}
+
 		if err := <-errChan; err != nil {
 			return err
 		}
@@ -57,10 +68,56 @@ func (a *Agent) Start() error {
 }
 
 func (a *Agent) connectOrchestrator() error {
-	// TODO: remove change this
+	type AgentBody struct {
+		Key       string `json:"key"`
+		Secret    string `json:"secret"`
+		CompanyID string `json:"company_id"`
+	}
+	b, err := json.Marshal(&AgentBody{
+		Key:       a.Config.Key,
+		Secret:    a.Config.Secret,
+		CompanyID: a.Config.CompanyID,
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/agent", a.Config.K8sDeploy.APIAddress), bytes.NewBuffer(b))
+	if err != nil {
+		return err
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode != http.StatusOK {
+		return errors.New("failed to connect to orchestrator")
+	}
+
+	type orchestratorResponse struct {
+		UpdateToken   string `json:"update_token"`
+		UpdateChannel int    `json:"update_channel"`
+		EventToken    string `json:"event_token"`
+		EventChannel  int    `json:"event_channel"`
+	}
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			panic(err)
+		}
+	}()
+	var resp orchestratorResponse
+	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+		return err
+	}
 	a.EventClient = &EventClient{
-		Token:        "CH6JBQS-QWwgIH4",
-		EventChannel: fmt.Sprintf("%s/application/1/message", a.Config.K8sDeploy.SocketAddress),
+		ID:    resp.EventChannel,
+		Token: resp.EventToken,
+		Name:  "eventChannel",
+	}
+	a.SelfUpdate = &EventClient{
+		ID:    resp.UpdateChannel,
+		Token: resp.UpdateToken,
+		Name:  "updateChannel",
 	}
 
 	return nil

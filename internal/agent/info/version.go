@@ -2,7 +2,9 @@ package info
 
 import "fmt"
 
-const VERSION_REQUEST_TYPE = "version"
+const (
+	versionRequestType = "version"
+)
 
 type VersionRequest struct {
 	Namespace string `json:"namespace"`

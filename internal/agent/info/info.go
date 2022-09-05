@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -13,9 +14,9 @@ type Info struct {
 }
 
 type InfoRequest struct {
-	NamespaceRequest
-	DeploymentsRequest
-	VersionRequest
+	Namespace  NamespaceRequest
+	Deployment DeploymentsRequest
+	Version    VersionRequest
 }
 
 func NewInfo(clientset *kubernetes.Clientset, ctx context.Context) *Info {
@@ -42,11 +43,11 @@ func (i Info) ParseInfoRequest(infoRequest string) error {
 
 	var is InfoSystem
 	switch msgMap["info_type"] {
-	case NAMESPACES_REQUERST_TYPE:
+	case namespaceRequestType:
 		is = NewNamespaces(i.ClientSet, i.Context)
-	case DEPLOYMENTS_REQUEST_TYPE:
+	case deploymentsRequestType:
 		is = NewDeployments()
-	case VERSION_REQUEST_TYPE:
+	case versionRequestType:
 		is = NewVersion()
 	}
 

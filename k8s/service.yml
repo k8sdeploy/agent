@@ -61,4 +61,19 @@ spec:
               value: "false"
             - name: SERVICE_NAME
               value: agent
+            - name: K8SDEPLOY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: k8sdeploy-agent
+                  key: api_key
+            - name: K8SDEPLOY_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: k8sdeploy-agent
+                  key: api_secret
+            - name: K8SDEPLOY_COMPANY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: k8sdeploy-agent
+                  key: company_id
 

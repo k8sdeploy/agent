@@ -3,11 +3,14 @@ package info
 import (
 	"context"
 	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-const NAMESPACES_REQUERST_TYPE = "namespaces"
+const (
+	namespaceRequestType = "namespaces"
+)
 
 type NamespaceSendResponse struct {
 	Namespaces []string `json:"namespaces"`
@@ -21,7 +24,7 @@ type NamespaceRequest struct {
 
 func NewNamespaces(clientset *kubernetes.Clientset, ctx context.Context) *NamespaceRequest {
 	return &NamespaceRequest{
-		InfoType:  NAMESPACES_REQUERST_TYPE,
+		InfoType:  namespaceRequestType,
 		Clientset: clientset,
 		Context:   ctx,
 	}
@@ -36,8 +39,7 @@ func (n *NamespaceRequest) SendResponse() error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Sprintf("%s", rs)
+	fmt.Printf("%+v\n", rs)
 
 	return nil
 }

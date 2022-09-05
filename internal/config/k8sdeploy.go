@@ -7,6 +7,7 @@ type K8sDeploy struct {
 	SocketAddress string `env:"SOCKET_ADDRESS" envDefault:"https://sockets.chewedfeed.com"`
 	Key           string `env:"K8SDEPLOY_KEY" envDefault:""`
 	Secret        string `env:"K8SDEPLOY_SECRET" envDefault:""`
+	CompanyID     string `env:"K8SDEPLOY_COMPANY_ID" envDefault:""`
 }
 
 func BuildK8sDeploy(c *Config) error {
