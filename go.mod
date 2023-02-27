@@ -3,7 +3,7 @@ module github.com/k8sdeploy/agent
 go 1.18
 
 require (
-	github.com/bugfixes/go-bugfixes v0.8.4
+	github.com/bugfixes/go-bugfixes v0.8.5
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/keloran/go-healthcheck v1.2.0
@@ -15,7 +15,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
-	github.com/go-logfmt/logfmt v0.5.1 // indirect
+	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
