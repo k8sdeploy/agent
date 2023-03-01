@@ -8,7 +8,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/keloran/go-healthcheck v1.2.0
 	github.com/keloran/go-probe v1.0.0
-	k8s.io/apimachinery v0.26.1
+	k8s.io/apimachinery v0.26.2
 	k8s.io/client-go v0.26.1
 )
 
