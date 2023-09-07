@@ -8,6 +8,7 @@ type K8sDeploy struct {
 	Key           string `env:"K8SDEPLOY_API_KEY" envDefault:""`
 	Secret        string `env:"K8SDEPLOY_API_SECRET" envDefault:""`
 	CompanyID     string `env:"K8SDEPLOY_COMPANY_ID" envDefault:""`
+	SelfUpdate    bool   `env:"K8SDEPLOY_SELF_UPDATE" envDefault:"false"`
 }
 
 func BuildK8sDeploy(c *Config) error {
