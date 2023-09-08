@@ -49,7 +49,7 @@ build-deploy: build publish-images deploy
 lint-build-deploy: lint build publish-images deploy
 
 .PHONY: test
-test: lint ## Test the app
+test: ## Test the app
 	go test \
 		-v \
 		-race \

@@ -81,7 +81,7 @@ func (a *Agent) listenForSelfUpdate(errChan chan error) {
 				errChan <- err
 			}
 
-			switch a.Config.Local.BuildVersion {
+			switch a.Config.K8sDeploy.BuildVersion {
 			case "dev":
 				return
 			case "latest":

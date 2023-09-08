@@ -74,9 +74,9 @@ func (a *Agent) connectOrchestrator() error {
 		CompanyID string `json:"company_id"`
 	}
 	b, err := json.Marshal(&AgentBody{
-		Key:       a.Config.Key,
-		Secret:    a.Config.Secret,
-		CompanyID: a.Config.CompanyID,
+		Key:       a.Config.K8sDeploy.Credentials.Key,
+		Secret:    a.Config.K8sDeploy.Credentials.Secret,
+		CompanyID: a.Config.K8sDeploy.Credentials.CompanyID,
 	})
 	if err != nil {
 		return err
