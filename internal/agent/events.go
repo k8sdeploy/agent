@@ -3,6 +3,7 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/bugfixes/go-bugfixes/logs"
 	"net/http"
 
 	"github.com/k8sdeploy/agent/internal/agent/deploy"
@@ -38,25 +39,25 @@ func (a *Agent) listenForSelfUpdate(errChan chan error) {
 
 	req, err := http.NewRequest("GET", channel, nil)
 	if err != nil {
-		errChan <- err
+		errChan <- logs.Errorf("failed to create request: %v", err)
 		return
 	}
 	req.Header.Set("X-Gotify-Key", a.SelfUpdate.Token)
 	// fmt.Printf("self-update token %s\n", a.SelfUpdate.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		errChan <- err
+		errChan <- logs.Errorf("failed to get self-update: %v", err)
 		return
 	}
 
 	defer func() {
 		if err := res.Body.Close(); err != nil {
-			fmt.Printf("Error: %s\n", err)
+			_ = logs.Errorf("failed to close body: %v", err)
 		}
 	}()
 
 	if res.StatusCode != http.StatusOK {
-		errChan <- fmt.Errorf("failed get updates: %s", res.Status)
+		errChan <- logs.Errorf("failed get self-update: %s", res.Status)
 		return
 	}
 
@@ -66,7 +67,7 @@ func (a *Agent) listenForSelfUpdate(errChan chan error) {
 	}
 	var m messages
 	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
-		errChan <- err
+		errChan <- logs.Errorf("failed to decode self-update: %v", err)
 		return
 	}
 
@@ -78,7 +79,7 @@ func (a *Agent) listenForSelfUpdate(errChan chan error) {
 		if m.Messages[0].Title == "update" {
 			var msg message
 			if err := json.Unmarshal([]byte(m.Messages[0].Message), &msg); err != nil {
-				errChan <- err
+				errChan <- logs.Errorf("failed to unmarshal self-update: %v", err)
 			}
 
 			switch a.Config.K8sDeploy.BuildVersion {
@@ -102,23 +103,23 @@ func (a *Agent) listenForEvents(errChan chan error) {
 
 	req, err := http.NewRequest("GET", channel, nil)
 	if err != nil {
-		errChan <- err
+		errChan <- logs.Errorf("failed to create request: %v", err)
 		return
 	}
 	req.Header.Set("X-Gotify-Key", a.EventClient.Token)
 	// fmt.Printf("events token %s\n", a.EventClient.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		errChan <- err
+		errChan <- logs.Errorf("failed to get service keys events: %v", err)
 		return
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
-			fmt.Printf("Error: %s\n", err)
+			_ = logs.Errorf("failed to close body: %v", err)
 		}
 	}()
 	if res.StatusCode != http.StatusOK {
-		errChan <- fmt.Errorf("failed get service keys events: %s", res.Status)
+		errChan <- logs.Errorf("failed get service keys events: %s", res.Status)
 		return
 	}
 
@@ -128,7 +129,7 @@ func (a *Agent) listenForEvents(errChan chan error) {
 	}
 	var m messages
 	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
-		errChan <- err
+		errChan <- logs.Errorf("failed to decode service keys events: %v", err)
 		return
 	}
 
@@ -145,11 +146,11 @@ func (a *Agent) listenForEvents(errChan chan error) {
 			messageErr = info.NewInfo(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).ParseInfoRequest(m.Messages[0].Message)
 			messageParsed = true
 		default:
-			fmt.Printf("unknown message type: %s\n", m.Messages[0].Title)
+			logs.Infof("unknown message type: %s\n", m.Messages[0].Title)
 		}
 
 		if messageErr != nil {
-			fmt.Printf("Error: %s\n", messageErr)
+			logs.Infof("Error: %s\n", messageErr)
 		}
 
 		if messageParsed {
@@ -169,16 +170,16 @@ func (a *Agent) deleteMessage(messageID int, errChan chan error) {
 	req.Header.Set("X-Gotify-Key", a.EventClient.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		errChan <- err
+		errChan <- logs.Errorf("failed to get service keys delete: %v", err)
 		return
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
-			fmt.Printf("Error: %s\n", err)
+			_ = logs.Errorf("failed to close body: %v", err)
 		}
 	}()
 	if res.StatusCode != http.StatusOK {
-		errChan <- fmt.Errorf("failed get service keys delete: %s", res.Status)
+		errChan <- logs.Errorf("failed get service keys delete: %s", res.Status)
 		return
 	}
 }

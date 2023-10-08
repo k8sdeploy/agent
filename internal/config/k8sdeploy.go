@@ -5,8 +5,8 @@ import (
 )
 
 type Credentials struct {
-	Key       string `env:"K8SDEPLOY_API_KEY" envDefault:""`
-	Secret    string `env:"K8SDEPLOY_API_SECRET" envDefault:""`
+	Key       string `env:"K8SDEPLOY_KEY" envDefault:""`
+	Secret    string `env:"K8SDEPLOY_SECRET" envDefault:""`
 	CompanyID string `env:"K8SDEPLOY_COMPANY_ID" envDefault:""`
 }
 

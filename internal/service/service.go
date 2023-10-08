@@ -2,11 +2,11 @@ package service
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"time"
 
-	bugLog "github.com/bugfixes/go-bugfixes/logs"
-	"github.com/go-chi/chi/v5"
+	"github.com/bugfixes/go-bugfixes/logs"
 	"github.com/k8sdeploy/agent/internal/agent"
 	"github.com/k8sdeploy/agent/internal/config"
 	"github.com/keloran/go-healthcheck"
@@ -19,7 +19,7 @@ type Service struct {
 
 func (s *Service) Start() error {
 	errChan := make(chan error)
-	if !s.Config.Local.Development {
+	if !s.Config.Config.Local.Development {
 		go startHealth(s.Config, errChan)
 	}
 	go startAgent(s.Config, errChan)
@@ -29,7 +29,7 @@ func (s *Service) Start() error {
 
 func startHealth(cfg *config.Config, errChan chan error) {
 	p := fmt.Sprintf(":%d", cfg.Local.HTTPPort)
-	bugLog.Local().Infof("Starting agent healthchecks on %s", p)
+	logs.Local().Infof("Starting agent healthchecks on %s", p)
 
 	r := chi.NewRouter()
 	r.Get("/health", healthcheck.HTTP)

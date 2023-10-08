@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bugfixes/go-bugfixes/logs"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -34,11 +35,11 @@ type InfoSystem interface {
 func (i Info) ParseInfoRequest(infoRequest string) error {
 	var msgMap map[string]interface{}
 	if err := json.Unmarshal([]byte(infoRequest), &msgMap); err != nil {
-		return err
+		return logs.Errorf("failed to unmarshal info request: %v", err)
 	}
 
 	if msgMap["info_type"] == nil {
-		return fmt.Errorf("info_type is required")
+		return logs.Error("info_type is required")
 	}
 
 	var is InfoSystem
@@ -56,11 +57,11 @@ func (i Info) ParseInfoRequest(infoRequest string) error {
 	}
 
 	if err := is.ParseRequest(msgMap); err != nil {
-		return err
+		return logs.Errorf("failed to parse request: %v", err)
 	}
 
 	if err := is.SendResponse(); err != nil {
-		return err
+		return logs.Errorf("failed to send response: %v", err)
 	}
 
 	return nil

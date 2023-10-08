@@ -3,6 +3,7 @@ package info
 import (
 	"context"
 	"fmt"
+	"github.com/bugfixes/go-bugfixes/logs"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -37,7 +38,7 @@ func (n *NamespaceRequest) ParseRequest(msgMap map[string]interface{}) error {
 func (n *NamespaceRequest) SendResponse() error {
 	rs, err := n.getNamespaces()
 	if err != nil {
-		return err
+		return logs.Errorf("failed to get namespaces: %v", err)
 	}
 	fmt.Printf("%+v\n", rs)
 
@@ -47,7 +48,7 @@ func (n *NamespaceRequest) SendResponse() error {
 func (n *NamespaceRequest) getNamespaces() (*NamespaceSendResponse, error) {
 	namespaces, err := n.Clientset.CoreV1().Namespaces().List(n.Context, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, logs.Errorf("failed to get namespaces: %v", err)
 	}
 
 	ret := make([]string, 0)
