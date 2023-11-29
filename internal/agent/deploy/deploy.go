@@ -3,7 +3,7 @@ package deploy
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/bugfixes/go-bugfixes/logs"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -30,11 +30,11 @@ func NewDeployment(clientset *kubernetes.Clientset, ctx context.Context) *Deploy
 func parseDeploymentInfo(deploymentInfo string) (*DeploymentInfo, error) {
 	var msgMap map[string]interface{}
 	if err := json.Unmarshal([]byte(deploymentInfo), &msgMap); err != nil {
-		return nil, err
+		return nil, logs.Errorf("unmarshal deployment info: %v", err)
 	}
 
 	if msgMap["name"] == nil {
-		return nil, fmt.Errorf("deployment name is required")
+		return nil, logs.Error("deployment name is required")
 	}
 
 	return &DeploymentInfo{
@@ -47,13 +47,13 @@ func parseDeploymentInfo(deploymentInfo string) (*DeploymentInfo, error) {
 func (d *Deployment) DeployImage(deploymentInfo string) error {
 	di, err := parseDeploymentInfo(deploymentInfo)
 	if err != nil {
-		return err
+		return logs.Errorf("parse deployment info: %v", err)
 	}
 
 	deps := d.ClientSet.AppsV1().Deployments(di.Namespace)
 	list, err := deps.List(d.Context, metav1.ListOptions{})
 	if err != nil {
-		return err
+		return logs.Errorf("list deployments: %v", err)
 	}
 
 	for _, dep := range list.Items {
@@ -62,7 +62,7 @@ func (d *Deployment) DeployImage(deploymentInfo string) error {
 			//nolint:gosec
 			_, err := deps.Update(d.Context, &dep, metav1.UpdateOptions{})
 			if err != nil {
-				return err
+				return logs.Errorf("update deployment: %v", err)
 			}
 		}
 	}

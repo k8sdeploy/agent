@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/bugfixes/go-bugfixes/logs"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -46,10 +46,10 @@ func (a *Agent) Start() error {
 	errChan := make(chan error)
 
 	if err := a.connectOrchestrator(); err != nil {
-		return err
+		return logs.Errorf("failed to connect to orchestrator: %v", err)
 	}
 	if err := a.getKubernetesClient(); err != nil {
-		return err
+		return logs.Errorf("failed to get kubernetes client: %v", err)
 	}
 	for {
 		// todo dictate this number by billing
@@ -62,7 +62,7 @@ func (a *Agent) Start() error {
 		}
 
 		if err := <-errChan; err != nil {
-			return err
+			return logs.Errorf("failed to start agent: %v", err)
 		}
 	}
 }
@@ -74,24 +74,24 @@ func (a *Agent) connectOrchestrator() error {
 		CompanyID string `json:"company_id"`
 	}
 	b, err := json.Marshal(&AgentBody{
-		Key:       a.Config.Key,
-		Secret:    a.Config.Secret,
-		CompanyID: a.Config.CompanyID,
+		Key:       a.Config.K8sDeploy.Credentials.Key,
+		Secret:    a.Config.K8sDeploy.Credentials.Secret,
+		CompanyID: a.Config.K8sDeploy.Credentials.CompanyID,
 	})
 	if err != nil {
-		return err
+		return logs.Errorf("failed to marshal agent body: %v", err)
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/agent", a.Config.K8sDeploy.APIAddress), bytes.NewBuffer(b))
 	if err != nil {
-		return err
+		return logs.Errorf("failed to create request: %v", err)
 	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return logs.Errorf("failed to connect to orchestrator: %v", err)
 	}
 	if res.StatusCode != http.StatusOK {
-		return errors.New("failed to connect to orchestrator")
+		return logs.Error("failed to connect to orchestrator")
 	}
 
 	type AgentChannelDetails struct {
@@ -105,12 +105,12 @@ func (a *Agent) connectOrchestrator() error {
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
-			panic(err)
+			_ = logs.Errorf("failed to close body: %v", err)
 		}
 	}()
 	var resp orchestratorResponse
 	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
-		return err
+		return logs.Errorf("failed to decode response: %v", err)
 	}
 	a.EventClient = &EventClient{
 		ID:    resp.Event.Channel,
@@ -132,12 +132,12 @@ func (a *Agent) getKubernetesClient() error {
 		cfgPath := filepath.Join(homedir.HomeDir(), ".kube", "config")
 		cfg, err := clientcmd.BuildConfigFromFlags("", cfgPath)
 		if err != nil {
-			return err
+			return logs.Errorf("failed to build config from flags: %v", err)
 		}
 
 		clientSet, err := kubernetes.NewForConfig(cfg)
 		if err != nil {
-			return err
+			return logs.Errorf("failed to create clientset: %v", err)
 		}
 		a.KubernetesClient = &KubernetesClient{
 			Context:   context.Background(),
@@ -148,12 +148,12 @@ func (a *Agent) getKubernetesClient() error {
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
-		return err
+		return logs.Errorf("failed to get in cluster config: %v", err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return err
+		return logs.Errorf("failed to create clientset: %v", err)
 	}
 	a.KubernetesClient = &KubernetesClient{
 		Context:   context.Background(),

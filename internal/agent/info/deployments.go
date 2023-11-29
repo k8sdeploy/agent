@@ -2,7 +2,7 @@ package info
 
 import (
 	"context"
-	"fmt"
+	"github.com/bugfixes/go-bugfixes/logs"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -33,7 +33,7 @@ func NewDeployments() *DeploymentsRequest {
 func (n *DeploymentsRequest) ParseRequest(msgMap map[string]interface{}) error {
 	namespace := msgMap["namespace"]
 	if namespace == nil {
-		return fmt.Errorf("namespace is required")
+		return logs.Error("failed to parse namespace")
 	}
 	n.Namespace = namespace.(string)
 	return nil

@@ -1,6 +1,9 @@
 package info
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/bugfixes/go-bugfixes/logs"
+)
 
 const (
 	versionRequestType = "version"
@@ -24,7 +27,7 @@ func NewVersion() *VersionRequest {
 func (n *VersionRequest) ParseRequest(msgMap map[string]interface{}) error {
 	namespace := msgMap["namespace"]
 	if namespace == nil {
-		return fmt.Errorf("namespace is required")
+		return logs.Error("namespace is required")
 	}
 
 	name := msgMap["name"]
