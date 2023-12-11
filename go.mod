@@ -3,7 +3,7 @@ module github.com/k8sdeploy/agent
 go 1.21
 
 require (
-	github.com/bugfixes/go-bugfixes v0.9.7
+	github.com/bugfixes/go-bugfixes v0.9.8
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/keloran/go-config v0.4.1
@@ -14,7 +14,6 @@ require (
 )
 
 require (
-	dario.cat/mergo v1.0.0 // indirect
 	github.com/caarlos0/env/v8 v8.0.0 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
