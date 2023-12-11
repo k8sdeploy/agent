@@ -47,7 +47,7 @@ spec:
         - name: regcred
       containers:
         - name: agent
-          image: containers.chewedfeed.com/k8sdeploy/agent:latest
+          image: containers.chewed-k8s.net/k8sdeploy/agent:latest
           imagePullPolicy: Always
           readinessProbe:
             httpGet:
