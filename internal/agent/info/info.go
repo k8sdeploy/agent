@@ -49,7 +49,7 @@ func (i Info) ParseInfoRequest(infoRequest string) error {
 	case deploymentsRequestType:
 		is = NewDeployments()
 	case versionRequestType:
-		is = NewVersion()
+		is = NewVersion(i.ClientSet, i.Context)
 	}
 
 	if is == nil {

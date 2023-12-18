@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/bugfixes/go-bugfixes/logs"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -45,26 +44,45 @@ func parseDeploymentInfo(deploymentInfo string) (*DeploymentInfo, error) {
 }
 
 func (d *Deployment) DeployImage(deploymentInfo string) error {
-	di, err := parseDeploymentInfo(deploymentInfo)
-	if err != nil {
-		return logs.Errorf("parse deployment info: %v", err)
-	}
+	//di, err := parseDeploymentInfo(deploymentInfo)
+	//if err != nil {
+	//	return logs.Errorf("parse deployment info: %v", err)
+	//}
+	//
+	//deps := d.ClientSet.AppsV1().Deployments(di.Namespace)
+	//list, err := deps.List(d.Context, metav1.ListOptions{})
+	//if err != nil {
+	//	return logs.Errorf("list deployments: %v", err)
+	//}
+	//
+	//for _, dep := range list.Items {
+	//	if dep.ObjectMeta.Name == di.Name {
+	//		dep.Spec.Template.Spec.Containers[0].Image = di.ImageURL
+	//		//nolint:gosec
+	//		_, err := deps.Update(d.Context, &dep, metav1.UpdateOptions{})
+	//		if err != nil {
+	//			return logs.Errorf("update deployment: %v", err)
+	//		}
+	//	}
+	//}
+	return nil
+}
 
-	deps := d.ClientSet.AppsV1().Deployments(di.Namespace)
-	list, err := deps.List(d.Context, metav1.ListOptions{})
-	if err != nil {
-		return logs.Errorf("list deployments: %v", err)
-	}
+func (d *Deployment) DeleteDeployment(deploymentInfo string) error {
+	//di, err := parseDeploymentInfo(deploymentInfo)
+	//if err != nil {
+	//  return logs.Errorf("parse deployment info: %v", err)
+	//}
+	//
+	//deps := d.ClientSet.AppsV1().Deployments(di.Namespace)
+	//err = deps.Delete(d.Context, di.Name, metav1.DeleteOptions{})
+	//if err != nil {
+	//  return logs.Errorf("delete deployment: %v", err)
+	//}
 
-	for _, dep := range list.Items {
-		if dep.ObjectMeta.Name == di.Name {
-			dep.Spec.Template.Spec.Containers[0].Image = di.ImageURL
-			//nolint:gosec
-			_, err := deps.Update(d.Context, &dep, metav1.UpdateOptions{})
-			if err != nil {
-				return logs.Errorf("update deployment: %v", err)
-			}
-		}
-	}
+	return nil
+}
+
+func (d *Deployment) GetDeploymentStatus(deploymentInfo string) error {
 	return nil
 }

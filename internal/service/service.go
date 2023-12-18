@@ -17,6 +17,12 @@ type Service struct {
 	Config *config.Config
 }
 
+func (s *Service) LocalStart() error {
+	errChan := make(chan error)
+	startAgent(s.Config, errChan)
+	return <-errChan
+}
+
 func (s *Service) Start() error {
 	errChan := make(chan error)
 	if !s.Config.Config.Local.Development {
