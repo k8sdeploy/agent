@@ -42,7 +42,7 @@ func NewAgent(cfg *config.Config) *Agent {
 
 func (a *Agent) Start() error {
 	errChan := make(chan error)
-	billingTime := 10
+	billingTime := 5
 
 	if err := a.connectOrchestrator(); err != nil {
 		return logs.Errorf("failed to connect to orchestrator: %v", err)
@@ -51,14 +51,6 @@ func (a *Agent) Start() error {
 		return logs.Errorf("failed to get kubernetes client: %v", err)
 	}
 	for {
-		logs.Local().Info("Getting events")
-		go a.listenForEvents(errChan)
-
-		if a.Config.SelfUpdate {
-			logs.Local().Info("Getting Self Update")
-			go a.listenForSelfUpdate(errChan)
-		}
-
 		select {
 		case err := <-errChan:
 			if err != nil {
@@ -66,6 +58,11 @@ func (a *Agent) Start() error {
 				continue
 			}
 		case <-time.After(time.Duration(billingTime) * time.Second):
+			go a.listenForEvents(errChan)
+
+			if a.Config.SelfUpdate {
+				go a.listenForSelfUpdate(errChan)
+			}
 			continue
 		}
 	}

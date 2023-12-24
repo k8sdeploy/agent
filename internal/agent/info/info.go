@@ -3,7 +3,6 @@ package info
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/bugfixes/go-bugfixes/logs"
 
 	"k8s.io/client-go/kubernetes"
@@ -12,51 +11,61 @@ import (
 type Info struct {
 	ClientSet *kubernetes.Clientset
 	Context   context.Context
+
+	Type      InfoType
+	RequestID string
 }
 
-type InfoRequest struct {
-	Namespace  NamespaceRequest
-	Deployment DeploymentsRequest
-	Version    VersionRequest
-}
+type InfoType string
 
-func NewInfo(clientset *kubernetes.Clientset, ctx context.Context) *Info {
+const (
+	namespaceRequestType   InfoType = "namespaces"
+	deploymentsRequestType InfoType = "deployments"
+	deploymentRequestType  InfoType = "deployment"
+)
+
+func NewInfo(cs *kubernetes.Clientset, ctx context.Context, it InfoType, rid string) *Info {
 	return &Info{
-		ClientSet: clientset,
+		ClientSet: cs,
 		Context:   ctx,
+
+		Type:      it,
+		RequestID: rid,
 	}
 }
 
-type InfoSystem interface {
-	ParseRequest(mappedString map[string]interface{}) error
+type RequestDetails struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}
+
+type System interface {
+	ProcessRequest(details RequestDetails) error
 	SendResponse() error
 }
 
-func (i Info) ParseInfoRequest(infoRequest string) error {
-	var msgMap map[string]interface{}
-	if err := json.Unmarshal([]byte(infoRequest), &msgMap); err != nil {
-		return logs.Errorf("failed to unmarshal info request: %v", err)
+func (i Info) ParseRequest(infoRequest interface{}) error {
+	jd, err := json.Marshal(infoRequest)
+	if err != nil {
+		return logs.Errorf("failed to marshal deployment request: %v", err)
 	}
 
-	if msgMap["info_type"] == nil {
-		return logs.Error("info_type is required")
+	var infoDetails RequestDetails
+	if err := json.Unmarshal(jd, &infoDetails); err != nil {
+		return logs.Errorf("failed to unmarshal deployment request: %v", err)
 	}
 
-	var is InfoSystem
-	switch msgMap["info_type"] {
+	var is System
+	switch i.Type {
 	case namespaceRequestType:
-		is = NewNamespaces(i.ClientSet, i.Context)
+		is = NewNamespaces(i.ClientSet, i.Context, i.RequestID)
 	case deploymentsRequestType:
-		is = NewDeployments()
-	case versionRequestType:
-		is = NewVersion(i.ClientSet, i.Context)
+		is = NewDeployments(i.ClientSet, i.Context, i.RequestID)
+	case deploymentRequestType:
+		is = NewDeployment(i.ClientSet, i.Context, i.RequestID)
 	}
 
-	if is == nil {
-		return fmt.Errorf("unknown info_type: %s", msgMap["info_type"])
-	}
-
-	if err := is.ParseRequest(msgMap); err != nil {
+	if err := is.ProcessRequest(infoDetails); err != nil {
 		return logs.Errorf("failed to parse request: %v", err)
 	}
 

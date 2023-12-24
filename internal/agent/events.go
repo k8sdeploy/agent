@@ -19,7 +19,16 @@ const (
 	Information ActionType = "info"
 )
 
-//nolint:gocyclo
+type PayloadDetails struct {
+	Action        ActionType `json:"action"`
+	RequestID     string     `json:"request_id"`
+	ActionDetails struct {
+		Type string `json:"type"`
+	} `json:"action_details"`
+	DeployDetails interface{} `json:"deploy_details"`
+	InfoDetails   interface{} `json:"info_details"`
+}
+
 //func (a *Agent) listenForSelfUpdate(errChan chan error) {
 //	channel := fmt.Sprintf("%s/application/%s/message?limit=1", a.Config.K8sDeploy.SocketAddress, a.SelfUpdate.ID)
 //	// fmt.Printf("self-update channel %s\n", channel)
@@ -99,7 +108,7 @@ func (a *Agent) getMessage(queue string, requeue bool) (string, error) {
 		AckMode:  ackMode,
 		Count:    1,
 		Encoding: "auto",
-		Truncate: 50000,
+		Truncate: 5000000,
 	})
 	if err != nil {
 		return "", logs.Errorf("failed to marshal %s payload: %v", queue, err)
@@ -126,11 +135,6 @@ func (a *Agent) getMessage(queue string, requeue bool) (string, error) {
 		return "", logs.Errorf("failed get %s events: %s", queue, res.Status)
 	}
 
-	// there isn't any messages
-	if res.ContentLength <= 10 {
-		return "", nil
-	}
-
 	type Message struct {
 		Exchange        string   `json:"exchange"`
 		MessageCount    int      `json:"message_count"`
@@ -147,17 +151,25 @@ func (a *Agent) getMessage(queue string, requeue bool) (string, error) {
 		return "", logs.Errorf("failed to decode %s events: %v", queue, err)
 	}
 
+	if len(m) == 0 {
+		return "", nil
+	}
+
+	if m[0].PayloadBytes < 10 || m[0].Payload == "" {
+		return "", nil
+	}
+
 	return m[0].Payload, nil
 }
 
 func (a *Agent) listenForSelfUpdate(errChan chan error) {
-	updateMessage, err := a.getMessage(a.Config.K8sDeploy.Queues.Master, false)
-	if err != nil {
-		errChan <- logs.Errorf("failed to get message: %v", err)
-		return
-	}
+	//updateMessage, err := a.getMessage(a.Config.K8sDeploy.Queues.Master, false)
+	//if err != nil {
+	//	errChan <- logs.Errorf("failed to get message: %v", err)
+	//	return
+	//}
 
-	fmt.Printf("updateMessage: %+v\n", updateMessage)
+	//fmt.Printf("updateMessage: %+v\n", updateMessage)
 }
 
 func (a *Agent) listenForEvents(errChan chan error) {
@@ -167,95 +179,26 @@ func (a *Agent) listenForEvents(errChan chan error) {
 		return
 	}
 
-	type AgentMessage struct {
-		Action ActionType `json:"action"`
-	}
-
 	if queueMessage == "" {
+		errChan <- nil
 		return
 	}
 
-	var am AgentMessage
-	if err := json.Unmarshal([]byte(queueMessage), &am); err != nil {
+	var payload PayloadDetails
+	if err := json.Unmarshal([]byte(queueMessage), &payload); err != nil {
 		errChan <- logs.Errorf("failed to unmarshal queueMessage: %v", err)
 		return
 	}
 
-	switch am.Action {
+	switch payload.Action {
 	case Deploy:
-		errChan <- deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).DeployImage(queueMessage)
-	case Delete:
-		errChan <- deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).DeleteDeployment(queueMessage)
+		deployType := deploy.DeployType(payload.ActionDetails.Type)
+		errChan <- deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context, deployType, payload.RequestID).ParseRequest(payload.DeployDetails)
 	case Information:
-		errChan <- info.NewInfo(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).ParseInfoRequest(queueMessage)
+		infoType := info.InfoType(payload.ActionDetails.Type)
+		errChan <- info.NewInfo(a.KubernetesClient.ClientSet, a.KubernetesClient.Context, infoType, payload.RequestID).ParseRequest(payload.InfoDetails)
 	default:
-		errChan <- logs.Errorf("unknown action: %s", am.Action)
+		logs.Info("unknown, %s", queueMessage)
+		errChan <- logs.Errorf("unknown action: %s", payload.Action)
 	}
-
-	fmt.Printf("agentMessage: %+v\n", am)
 }
-
-//nolint:gocyclo
-//func (a *Agent) listenForEventsOld(errChan chan error) {
-//	channel := fmt.Sprintf("%s/application/%s/message?limit=1", a.Config.K8sDeploy.SocketAddress, a.EventClient.ID)
-//	// fmt.Printf("events channel %s\n", channel)
-//
-//	req, err := http.NewRequest("GET", channel, nil)
-//	if err != nil {
-//		errChan <- logs.Errorf("failed to create request: %v", err)
-//		return
-//	}
-//	req.Header.Set("X-Gotify-Key", a.EventClient.Token)
-//	// fmt.Printf("events token %s\n", a.EventClient.Token)
-//	res, err := http.DefaultClient.Do(req)
-//	if err != nil {
-//		errChan <- logs.Errorf("failed to get service keys events: %v", err)
-//		return
-//	}
-//	defer func() {
-//		if err := res.Body.Close(); err != nil {
-//			_ = logs.Errorf("failed to close body: %v", err)
-//		}
-//	}()
-//	if res.StatusCode != http.StatusOK {
-//		errChan <- logs.Errorf("failed get service keys events: %s", res.Status)
-//		return
-//	}
-//
-//	type messages struct {
-//		Messages []Message `json:"messages"`
-//		Paging   Paging    `json:"paging"`
-//	}
-//	var m messages
-//	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
-//		errChan <- logs.Errorf("failed to decode service keys events: %v", err)
-//		return
-//	}
-//
-//	var messageErr error
-//
-//	if len(m.Messages) >= 1 {
-//		messageParsed := false
-//
-//		switch m.Messages[0].Title {
-//		case messageTypeDeploy:
-//			messageErr = deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).DeployImage(m.Messages[0].Message)
-//			messageParsed = true
-//		case messageTypeInfo:
-//			messageErr = info.NewInfo(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).ParseInfoRequest(m.Messages[0].Message)
-//			messageParsed = true
-//		default:
-//			logs.Infof("unknown message type: %s\n", m.Messages[0].Title)
-//		}
-//
-//		if messageErr != nil {
-//			logs.Infof("Error: %s\n", messageErr)
-//		}
-//
-//		if messageParsed {
-//			a.deleteMessage(m.Messages[0].MessageID, errChan)
-//		}
-//	}
-//
-//	errChan <- messageErr
-//}

@@ -3,86 +3,74 @@ package deploy
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/bugfixes/go-bugfixes/logs"
 
 	"k8s.io/client-go/kubernetes"
 )
 
+type DeployType string
+
+const (
+	imageRequestType DeployType = "image"
+)
+
 type Deployment struct {
 	ClientSet *kubernetes.Clientset
 	Context   context.Context
+	Type      DeployType
+	RequestID string
 }
 
-type DeploymentInfo struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	ImageURL  string `json:"image_url"`
+type RequestDetails struct {
+	Name         string `json:"name"`
+	Namespace    string `json:"namespace"`
+	ContainerURL string `json:"container_url"`
+	Hash         string `json:"hash"`
+	Tag          string `json:"tag"`
 }
 
-func NewDeployment(clientset *kubernetes.Clientset, ctx context.Context) *Deployment {
+func NewDeployment(cs *kubernetes.Clientset, ctx context.Context, dt DeployType, rid string) *Deployment {
 	return &Deployment{
-		ClientSet: clientset,
+		ClientSet: cs,
 		Context:   ctx,
+
+		Type:      dt,
+		RequestID: rid,
 	}
 }
 
-func parseDeploymentInfo(deploymentInfo string) (*DeploymentInfo, error) {
-	var msgMap map[string]interface{}
-	if err := json.Unmarshal([]byte(deploymentInfo), &msgMap); err != nil {
-		return nil, logs.Errorf("unmarshal deployment info: %v", err)
+type System interface {
+	ProcessRequest(details RequestDetails) error
+	SendResponse() error
+}
+
+func (d *Deployment) ParseRequest(deploymentRequest interface{}) error {
+	jd, err := json.Marshal(deploymentRequest)
+	if err != nil {
+		return logs.Errorf("failed to marshal deployment request: %v", err)
 	}
 
-	if msgMap["name"] == nil {
-		return nil, logs.Error("deployment name is required")
+	var deployDetails RequestDetails
+	if err := json.Unmarshal(jd, &deployDetails); err != nil {
+		return logs.Errorf("failed to unmarshal deployment request: %v", err)
 	}
 
-	return &DeploymentInfo{
-		Name:      msgMap["name"].(string),
-		Namespace: msgMap["namespace"].(string),
-		ImageURL:  msgMap["image_url"].(string),
-	}, nil
-}
+	var is System
+	switch d.Type {
+	case imageRequestType:
+		is = NewImage(d.ClientSet, d.Context, d.RequestID)
+	default:
+		return fmt.Errorf("unknown deployment_type: %s", d.Type)
+	}
 
-func (d *Deployment) DeployImage(deploymentInfo string) error {
-	//di, err := parseDeploymentInfo(deploymentInfo)
-	//if err != nil {
-	//	return logs.Errorf("parse deployment info: %v", err)
-	//}
-	//
-	//deps := d.ClientSet.AppsV1().Deployments(di.Namespace)
-	//list, err := deps.List(d.Context, metav1.ListOptions{})
-	//if err != nil {
-	//	return logs.Errorf("list deployments: %v", err)
-	//}
-	//
-	//for _, dep := range list.Items {
-	//	if dep.ObjectMeta.Name == di.Name {
-	//		dep.Spec.Template.Spec.Containers[0].Image = di.ImageURL
-	//		//nolint:gosec
-	//		_, err := deps.Update(d.Context, &dep, metav1.UpdateOptions{})
-	//		if err != nil {
-	//			return logs.Errorf("update deployment: %v", err)
-	//		}
-	//	}
-	//}
-	return nil
-}
+	if err := is.ProcessRequest(deployDetails); err != nil {
+		return logs.Errorf("failed to parse request: %v", err)
+	}
 
-func (d *Deployment) DeleteDeployment(deploymentInfo string) error {
-	//di, err := parseDeploymentInfo(deploymentInfo)
-	//if err != nil {
-	//  return logs.Errorf("parse deployment info: %v", err)
-	//}
-	//
-	//deps := d.ClientSet.AppsV1().Deployments(di.Namespace)
-	//err = deps.Delete(d.Context, di.Name, metav1.DeleteOptions{})
-	//if err != nil {
-	//  return logs.Errorf("delete deployment: %v", err)
-	//}
+	if err := is.SendResponse(); err != nil {
+		return logs.Errorf("failed to send response: %v", err)
+	}
 
-	return nil
-}
-
-func (d *Deployment) GetDeploymentStatus(deploymentInfo string) error {
 	return nil
 }

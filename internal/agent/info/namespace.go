@@ -9,46 +9,31 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const (
-	namespaceRequestType = "namespaces"
-)
-
 type NamespaceSendResponse struct {
 	Namespaces []string `json:"namespaces"`
 }
 
 type NamespaceRequest struct {
-	InfoType  string `json:"info_type"`
 	Clientset *kubernetes.Clientset
 	Context   context.Context
+
+	RequestID string
+	Response  *NamespaceSendResponse
 }
 
-func NewNamespaces(clientset *kubernetes.Clientset, ctx context.Context) *NamespaceRequest {
+func NewNamespaces(cs *kubernetes.Clientset, ctx context.Context, rid string) *NamespaceRequest {
 	return &NamespaceRequest{
-		InfoType:  namespaceRequestType,
-		Clientset: clientset,
+		Clientset: cs,
 		Context:   ctx,
+
+		RequestID: rid,
 	}
 }
 
-func (n *NamespaceRequest) ParseRequest(msgMap map[string]interface{}) error {
-	return nil
-}
-
-func (n *NamespaceRequest) SendResponse() error {
-	rs, err := n.getNamespaces()
-	if err != nil {
-		return logs.Errorf("failed to get namespaces: %v", err)
-	}
-	fmt.Printf("%+v\n", rs)
-
-	return nil
-}
-
-func (n *NamespaceRequest) getNamespaces() (*NamespaceSendResponse, error) {
+func (n *NamespaceRequest) ProcessRequest(id RequestDetails) error {
 	namespaces, err := n.Clientset.CoreV1().Namespaces().List(n.Context, metav1.ListOptions{})
 	if err != nil {
-		return nil, logs.Errorf("failed to get namespaces: %v", err)
+		return logs.Errorf("failed to get namespaces: %v", err)
 	}
 
 	ret := make([]string, 0)
@@ -56,7 +41,15 @@ func (n *NamespaceRequest) getNamespaces() (*NamespaceSendResponse, error) {
 		ret = append(ret, namespace.Name)
 	}
 
-	return &NamespaceSendResponse{
+	n.Response = &NamespaceSendResponse{
 		Namespaces: ret,
-	}, nil
+	}
+
+	return nil
+}
+
+func (n *NamespaceRequest) SendResponse() error {
+	fmt.Printf("namespaces: %+v\n", n.Response)
+
+	return nil
 }
