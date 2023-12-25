@@ -2,14 +2,14 @@ package info
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"github.com/bugfixes/go-bugfixes/logs"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 type NamespaceSendResponse struct {
+	RequestID  string   `json:"request_id"`
 	Namespaces []string `json:"namespaces"`
 }
 
@@ -21,13 +21,15 @@ type NamespaceRequest struct {
 	Response  *NamespaceSendResponse
 }
 
-func NewNamespaces(cs *kubernetes.Clientset, ctx context.Context, rid string) *NamespaceRequest {
+func NewNamespaces(cs *kubernetes.Clientset, ctx context.Context) *NamespaceRequest {
 	return &NamespaceRequest{
 		Clientset: cs,
 		Context:   ctx,
-
-		RequestID: rid,
 	}
+}
+
+func (n *NamespaceRequest) SetRequestID(rid string) {
+	n.RequestID = rid
 }
 
 func (n *NamespaceRequest) ProcessRequest(id RequestDetails) error {
@@ -48,8 +50,13 @@ func (n *NamespaceRequest) ProcessRequest(id RequestDetails) error {
 	return nil
 }
 
-func (n *NamespaceRequest) SendResponse() error {
-	fmt.Printf("namespaces: %+v\n", n.Response)
+func (n *NamespaceRequest) GetResponse() (string, error) {
+	n.Response.RequestID = n.RequestID
 
-	return nil
+	jd, err := json.Marshal(n.Response)
+	if err != nil {
+		return "", logs.Errorf("failed to marshal response: %v", err)
+	}
+
+	return string(jd), nil
 }

@@ -2,7 +2,7 @@ package info
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"github.com/bugfixes/go-bugfixes/logs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -22,17 +22,20 @@ type DeploymentInfo struct {
 	Container string `json:"container"`
 }
 type DeploymentsSendResponse struct {
+	RequestID   string           `json:"request_id"`
 	Namespace   string           `json:"namespace"`
 	Deployments []DeploymentInfo `json:"deployments"`
 }
 
-func NewDeployments(cs *kubernetes.Clientset, ctx context.Context, rid string) *DeploymentsRequest {
+func NewDeployments(cs *kubernetes.Clientset, ctx context.Context) *DeploymentsRequest {
 	return &DeploymentsRequest{
 		ClientSet: cs,
 		Context:   ctx,
-
-		RequestID: rid,
 	}
+}
+
+func (d *DeploymentsRequest) SetRequestID(rid string) {
+	d.RequestID = rid
 }
 
 func (d *DeploymentsRequest) ProcessRequest(details RequestDetails) error {
@@ -49,10 +52,15 @@ func (d *DeploymentsRequest) ProcessRequest(details RequestDetails) error {
 	return nil
 }
 
-func (d *DeploymentsRequest) SendResponse() error {
-	fmt.Printf("deployments: %+v\n", d.Response)
+func (d *DeploymentsRequest) GetResponse() (string, error) {
+	d.Response.RequestID = d.RequestID
 
-	return nil
+	jd, err := json.Marshal(d.Response)
+	if err != nil {
+		return "", logs.Errorf("failed to marshal response: %v", err)
+	}
+
+	return string(jd), nil
 }
 
 func (d *DeploymentsRequest) GetDeployments(namespace string) ([]DeploymentInfo, error) {

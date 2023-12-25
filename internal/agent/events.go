@@ -192,11 +192,17 @@ func (a *Agent) listenForEvents(errChan chan error) {
 
 	switch payload.Action {
 	case Deploy:
-		deployType := deploy.DeployType(payload.ActionDetails.Type)
-		errChan <- deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context, deployType, payload.RequestID).ParseRequest(payload.DeployDetails)
+		d := deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context)
+		d.SetDeploymentType(deploy.DeployType(payload.ActionDetails.Type))
+		d.SetRequestID(payload.RequestID)
+		errChan <- d.ParseRequest(payload.DeployDetails)
+		errChan <- d.SendResponse(a.Config)
 	case Information:
-		infoType := info.InfoType(payload.ActionDetails.Type)
-		errChan <- info.NewInfo(a.KubernetesClient.ClientSet, a.KubernetesClient.Context, infoType, payload.RequestID).ParseRequest(payload.InfoDetails)
+		i := info.NewInfo(a.KubernetesClient.ClientSet, a.KubernetesClient.Context)
+		i.SetInfoType(info.InfoType(payload.ActionDetails.Type))
+		i.SetRequestID(payload.RequestID)
+		errChan <- i.ParseRequest(payload.InfoDetails)
+		errChan <- i.SendResponse(a.Config)
 	default:
 		logs.Info("unknown, %s", queueMessage)
 		errChan <- logs.Errorf("unknown action: %s", payload.Action)

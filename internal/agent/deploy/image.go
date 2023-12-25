@@ -2,10 +2,12 @@ package deploy
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/bugfixes/go-bugfixes/logs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"time"
 )
 
 type ImageRequest struct {
@@ -18,12 +20,15 @@ type ImageRequest struct {
 	UpdateStatus bool
 }
 
-func NewImage(cs *kubernetes.Clientset, ctx context.Context, rid string) *ImageRequest {
+func NewImage(cs *kubernetes.Clientset, ctx context.Context) *ImageRequest {
 	return &ImageRequest{
 		ClientSet: cs,
 		Context:   ctx,
-		RequestID: rid,
 	}
+}
+
+func (i *ImageRequest) SetRequestID(rid string) {
+	i.RequestID = rid
 }
 
 func (i *ImageRequest) ProcessRequest(details RequestDetails) error {
@@ -68,8 +73,22 @@ func (i *ImageRequest) ProcessRequest(details RequestDetails) error {
 	return nil
 }
 
-func (i *ImageRequest) SendResponse() error {
-	fmt.Printf("send response: %v\n", i.UpdateStatus)
+func (i *ImageRequest) GetResponse() (string, error) {
+	type Resp struct {
+		Updated    bool      `json:"updated"`
+		UpdateTime time.Time `json:"update_time"`
+		RequestID  string    `json:"request_id"`
+	}
 
-	return nil
+	resp, err := json.Marshal(Resp{
+		Updated:    i.UpdateStatus,
+		UpdateTime: time.Now(),
+		RequestID:  i.RequestID,
+	})
+
+	if err != nil {
+		return "", logs.Errorf("failed to marshal response: %v", err)
+	}
+
+	return string(resp), nil
 }

@@ -2,6 +2,7 @@ package info
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/bugfixes/go-bugfixes/logs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,7 @@ type Replicas struct {
 }
 
 type DeploymentResponse struct {
+	RequestID string    `json:"request_id"`
 	Name      string    `json:"name"`
 	Namespace string    `json:"namespace"`
 	Image     string    `json:"image"`
@@ -44,13 +46,15 @@ type PodInfo struct {
 	Metrics   interface{} `json:"metrics"`
 }
 
-func NewDeployment(cs *kubernetes.Clientset, ctx context.Context, rid string) *DeploymentRequest {
+func NewDeployment(cs *kubernetes.Clientset, ctx context.Context) *DeploymentRequest {
 	return &DeploymentRequest{
 		ClientSet: cs,
 		Context:   ctx,
-
-		RequestID: rid,
 	}
+}
+
+func (v *DeploymentRequest) SetRequestID(rid string) {
+	v.RequestID = rid
 }
 
 func (v *DeploymentRequest) ProcessRequest(details RequestDetails) error {
@@ -71,10 +75,15 @@ func (v *DeploymentRequest) ProcessRequest(details RequestDetails) error {
 	return nil
 }
 
-func (v *DeploymentRequest) SendResponse() error {
-	fmt.Printf("deployment: %+v\n", v.Response)
+func (v *DeploymentRequest) GetResponse() (string, error) {
+	v.Response.RequestID = v.RequestID
 
-	return nil
+	jd, err := json.Marshal(v.Response)
+	if err != nil {
+		return "", logs.Errorf("failed to marshal deployment response: %v", err)
+	}
+
+	return string(jd), nil
 }
 
 func (v *DeploymentRequest) getDeployment(name, namespace string) (*DeploymentResponse, error) {
@@ -97,8 +106,8 @@ func (v *DeploymentRequest) getDeployment(name, namespace string) (*DeploymentRe
 	}
 
 	return &DeploymentResponse{
-		Name:      v.Name,
-		Namespace: v.Namespace,
+		Name:      name,
+		Namespace: namespace,
 		Version:   version,
 		Image:     i,
 		Replicas: Replicas{
