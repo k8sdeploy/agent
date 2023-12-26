@@ -63,19 +63,21 @@ spec:
               value: "false"
             - name: SERVICE_NAME
               value: agent
+            - name: HTTP_PORT
+              value: "3000"
             - name: K8SDEPLOY_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: k8sdeploy-agent
-                  key: K8SDEPLOY_API_KEY
+                  key: api-key
             - name: K8SDEPLOY_API_SECRET
               valueFrom:
                 secretKeyRef:
                   name: k8sdeploy-agent
-                  key: K8SDEPLOY_API_SECRET
+                  key: api-secret
             - name: K8SDEPLOY_COMPANY_ID
               valueFrom:
                 secretKeyRef:
                   name: k8sdeploy-agent
-                  key: K8SDEPLOY_COMPANY_ID
+                  key: company-id
 
