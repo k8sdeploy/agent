@@ -57,7 +57,7 @@ func (v *DeploymentRequest) SetRequestID(rid string) {
 	v.RequestID = rid
 }
 
-func (v *DeploymentRequest) ProcessRequest(details RequestDetails) error {
+func (v *DeploymentRequest) ProcessRequest(details *RequestDetails) error {
 	if details.Namespace == "" {
 		return logs.Error("namespace is required")
 	}

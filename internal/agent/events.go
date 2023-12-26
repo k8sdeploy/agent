@@ -29,69 +29,6 @@ type PayloadDetails struct {
 	InfoDetails   interface{} `json:"info_details"`
 }
 
-//func (a *Agent) listenForSelfUpdate(errChan chan error) {
-//	channel := fmt.Sprintf("%s/application/%s/message?limit=1", a.Config.K8sDeploy.SocketAddress, a.SelfUpdate.ID)
-//	// fmt.Printf("self-update channel %s\n", channel)
-//
-//	req, err := http.NewRequest("GET", channel, nil)
-//	if err != nil {
-//		errChan <- logs.Errorf("failed to create request: %v", err)
-//		return
-//	}
-//	req.Header.Set("X-Gotify-Key", a.SelfUpdate.Token)
-//	// fmt.Printf("self-update token %s\n", a.SelfUpdate.Token)
-//	res, err := http.DefaultClient.Do(req)
-//	if err != nil {
-//		errChan <- logs.Errorf("failed to get self-update: %v", err)
-//		return
-//	}
-//
-//	defer func() {
-//		if err := res.Body.Close(); err != nil {
-//			_ = logs.Errorf("failed to close body: %v", err)
-//		}
-//	}()
-//
-//	if res.StatusCode != http.StatusOK {
-//		errChan <- logs.Errorf("failed get self-update: %s", res.Status)
-//		return
-//	}
-//
-//	type messages struct {
-//		Messages []Message `json:"messages"`
-//		Paging   Paging    `json:"paging"`
-//	}
-//	var m messages
-//	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
-//		errChan <- logs.Errorf("failed to decode self-update: %v", err)
-//		return
-//	}
-//
-//	type message struct {
-//		Version string `json:"version"`
-//	}
-//
-//	if len(m.Messages) >= 1 {
-//		if m.Messages[0].Title == "update" {
-//			var msg message
-//			if err := json.Unmarshal([]byte(m.Messages[0].Message), &msg); err != nil {
-//				errChan <- logs.Errorf("failed to unmarshal self-update: %v", err)
-//			}
-//
-//			switch a.Config.K8sDeploy.BuildVersion {
-//			case "dev":
-//				return
-//			case "latest":
-//				return
-//			case msg.Version:
-//				return
-//			}
-//
-//			errChan <- deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context).DeployImage(m.Messages[0].Message)
-//		}
-//	}
-//}
-
 func (a *Agent) getMessage(queue string, requeue bool) (string, error) {
 	ackMode := "ack_requeue_false"
 	if requeue {
@@ -163,13 +100,15 @@ func (a *Agent) getMessage(queue string, requeue bool) (string, error) {
 }
 
 func (a *Agent) listenForSelfUpdate(errChan chan error) {
-	//updateMessage, err := a.getMessage(a.Config.K8sDeploy.Queues.Master, false)
-	//if err != nil {
-	//	errChan <- logs.Errorf("failed to get message: %v", err)
-	//	return
-	//}
+	updateMessage, err := a.getMessage(a.Config.K8sDeploy.Queues.Master, true)
+	if err != nil {
+		errChan <- logs.Errorf("failed to get message: %v", err)
+		return
+	}
 
-	//fmt.Printf("updateMessage: %+v\n", updateMessage)
+	if updateMessage != "" {
+		fmt.Printf("updateMessage: %+v\n", updateMessage)
+	}
 }
 
 func (a *Agent) listenForEvents(errChan chan error) {
@@ -193,13 +132,13 @@ func (a *Agent) listenForEvents(errChan chan error) {
 	switch payload.Action {
 	case Deploy:
 		d := deploy.NewDeployment(a.KubernetesClient.ClientSet, a.KubernetesClient.Context)
-		d.SetDeploymentType(deploy.DeployType(payload.ActionDetails.Type))
+		d.SetDeploymentType(deploy.TypeDeploy(payload.ActionDetails.Type))
 		d.SetRequestID(payload.RequestID)
 		errChan <- d.ParseRequest(payload.DeployDetails)
 		errChan <- d.SendResponse(a.Config)
 	case Information:
 		i := info.NewInfo(a.KubernetesClient.ClientSet, a.KubernetesClient.Context)
-		i.SetInfoType(info.InfoType(payload.ActionDetails.Type))
+		i.SetInfoType(info.TypeInfo(payload.ActionDetails.Type))
 		i.SetRequestID(payload.RequestID)
 		errChan <- i.ParseRequest(payload.InfoDetails)
 		errChan <- i.SendResponse(a.Config)

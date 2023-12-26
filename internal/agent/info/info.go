@@ -16,18 +16,18 @@ type Info struct {
 	ClientSet *kubernetes.Clientset
 	Context   context.Context
 
-	Type      InfoType
+	Type      TypeInfo
 	RequestID string
 
 	Response string
 }
 
-type InfoType string
+type TypeInfo string
 
 const (
-	namespaceRequestType   InfoType = "namespaces"
-	deploymentsRequestType InfoType = "deployments"
-	deploymentRequestType  InfoType = "deployment"
+	namespaceRequestType   TypeInfo = "namespaces"
+	deploymentsRequestType TypeInfo = "deployments"
+	deploymentRequestType  TypeInfo = "deployment"
 )
 
 func NewInfo(cs *kubernetes.Clientset, ctx context.Context) *Info {
@@ -37,7 +37,7 @@ func NewInfo(cs *kubernetes.Clientset, ctx context.Context) *Info {
 	}
 }
 
-func (i *Info) SetInfoType(it InfoType) {
+func (i *Info) SetInfoType(it TypeInfo) {
 	i.Type = it
 }
 
@@ -52,32 +52,52 @@ type RequestDetails struct {
 
 type System interface {
 	SetRequestID(rid string)
-	ProcessRequest(details RequestDetails) error
+	ProcessRequest(details *RequestDetails) error
 	GetResponse() (string, error)
 }
 
+func requestToInfo(infoRequest interface{}) (*RequestDetails, error) {
+	ir, err := json.Marshal(infoRequest)
+	if err != nil {
+		return nil, logs.Errorf("failed to marshal deployment request: %v", err)
+	}
+
+	jd := &RequestDetails{}
+	if err := json.Unmarshal(ir, jd); err != nil {
+		return nil, logs.Errorf("failed to unmarshal deployment request: %v", err)
+	}
+
+	return jd, nil
+}
+
+func (i *Info) createSystem(clientSet *kubernetes.Clientset, context context.Context, infoType TypeInfo) (System, error) {
+	var is System
+	switch infoType {
+	case namespaceRequestType:
+		is = NewNamespaces(clientSet, context)
+	case deploymentsRequestType:
+		is = NewDeployments(clientSet, context)
+	case deploymentRequestType:
+		is = NewDeployment(clientSet, context)
+	default:
+		return nil, logs.Errorf("unknown info type: %s", infoType)
+	}
+
+	is.SetRequestID(i.RequestID)
+
+	return is, nil
+}
+
 func (i *Info) ParseRequest(infoRequest interface{}) error {
-	jd, err := json.Marshal(infoRequest)
+	infoDetails, err := requestToInfo(infoRequest)
 	if err != nil {
 		return logs.Errorf("failed to marshal deployment request: %v", err)
 	}
 
-	var infoDetails RequestDetails
-	if err := json.Unmarshal(jd, &infoDetails); err != nil {
-		return logs.Errorf("failed to unmarshal deployment request: %v", err)
+	is, err := i.createSystem(i.ClientSet, i.Context, i.Type)
+	if err != nil {
+		return logs.Errorf("failed to create system: %v", err)
 	}
-
-	var is System
-	switch i.Type {
-	case namespaceRequestType:
-		is = NewNamespaces(i.ClientSet, i.Context)
-	case deploymentsRequestType:
-		is = NewDeployments(i.ClientSet, i.Context)
-	case deploymentRequestType:
-		is = NewDeployment(i.ClientSet, i.Context)
-	}
-
-	is.SetRequestID(i.RequestID)
 
 	if err := is.ProcessRequest(infoDetails); err != nil {
 		return logs.Errorf("failed to parse request: %v", err)

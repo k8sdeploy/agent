@@ -11,17 +11,17 @@ import (
 	"net/http"
 )
 
-type DeployType string
+type TypeDeploy string
 
 const (
-	imageRequestType DeployType = "image"
+	imageRequestType TypeDeploy = "image"
 )
 
 type Deployment struct {
 	ClientSet *kubernetes.Clientset
 	Context   context.Context
 
-	Type      DeployType
+	Type      TypeDeploy
 	RequestID string
 
 	Response string
@@ -42,7 +42,7 @@ func NewDeployment(cs *kubernetes.Clientset, ctx context.Context) *Deployment {
 	}
 }
 
-func (d *Deployment) SetDeploymentType(dt DeployType) {
+func (d *Deployment) SetDeploymentType(dt TypeDeploy) {
 	d.Type = dt
 }
 
@@ -56,26 +56,44 @@ type System interface {
 	GetResponse() (string, error)
 }
 
-func (d *Deployment) ParseRequest(deploymentRequest interface{}) error {
+func requestToDetails(deploymentRequest interface{}) (RequestDetails, error) {
 	jd, err := json.Marshal(deploymentRequest)
 	if err != nil {
-		return logs.Errorf("failed to marshal deployment request: %v", err)
+		return RequestDetails{}, logs.Errorf("failed to marshal deployment request: %v", err)
 	}
 
 	var deployDetails RequestDetails
 	if err := json.Unmarshal(jd, &deployDetails); err != nil {
-		return logs.Errorf("failed to unmarshal deployment request: %v", err)
+		return RequestDetails{}, logs.Errorf("failed to unmarshal deployment request: %v", err)
 	}
 
-	var is System
+	return deployDetails, nil
+}
+
+func (d *Deployment) getSystem() (System, error) {
+	var sys System
+
 	switch d.Type {
 	case imageRequestType:
-		is = NewImage(d.ClientSet, d.Context)
+		sys = NewImage(d.ClientSet, d.Context)
 	default:
-		return fmt.Errorf("unknown deployment_type: %s", d.Type)
+		return nil, logs.Errorf("unknown deployment_type: %s", d.Type)
 	}
 
-	is.SetRequestID(d.RequestID)
+	sys.SetRequestID(d.RequestID)
+	return sys, nil
+}
+
+func (d *Deployment) ParseRequest(deploymentRequest interface{}) error {
+	deployDetails, err := requestToDetails(deploymentRequest)
+	if err != nil {
+		return logs.Errorf("failed to parse request: %v", err)
+	}
+
+	is, err := d.getSystem()
+	if err != nil {
+		return logs.Errorf("failed to get system: %v", err)
+	}
 
 	if err := is.ProcessRequest(deployDetails); err != nil {
 		return logs.Errorf("failed to parse request: %v", err)
@@ -90,7 +108,7 @@ func (d *Deployment) ParseRequest(deploymentRequest interface{}) error {
 	return nil
 }
 
-func (d *Deployment) SendResponse(cfg *config.Config) error {
+func (d *Deployment) createPayload(cfg *config.Config) ([]byte, error) {
 	type Props struct {
 		RequestID string `json:"request_id"`
 	}
@@ -111,7 +129,16 @@ func (d *Deployment) SendResponse(cfg *config.Config) error {
 		Payload:         d.Response,
 	})
 	if err != nil {
-		return logs.Errorf("failed to marshal payload: %v", err)
+		return nil, logs.Errorf("failed to marshal payload: %v", err)
+	}
+
+	return payload, nil
+}
+
+func (d *Deployment) SendResponse(cfg *config.Config) error {
+	payload, err := d.createPayload(cfg)
+	if err != nil {
+		return logs.Errorf("failed to create payload: %v", err)
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/exchanges/%s/amq.default/publish", cfg.Rabbit.Host, cfg.K8sDeploy.Queues.Agent), bytes.NewBuffer(payload))

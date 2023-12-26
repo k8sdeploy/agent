@@ -38,7 +38,7 @@ func (d *DeploymentsRequest) SetRequestID(rid string) {
 	d.RequestID = rid
 }
 
-func (d *DeploymentsRequest) ProcessRequest(details RequestDetails) error {
+func (d *DeploymentsRequest) ProcessRequest(details *RequestDetails) error {
 	dp, err := d.GetDeployments(details.Namespace)
 	if err != nil {
 		return logs.Errorf("failed to get deployments: %v", err)

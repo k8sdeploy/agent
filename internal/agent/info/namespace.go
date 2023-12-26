@@ -44,7 +44,7 @@ func (n *NamespaceRequest) fetchAllNamespaces() ([]string, error) {
 	return ret, nil
 }
 
-func (n *NamespaceRequest) ProcessRequest(id RequestDetails) error {
+func (n *NamespaceRequest) ProcessRequest(id *RequestDetails) error {
 	namespaces, err := n.fetchAllNamespaces()
 	if err != nil {
 		return logs.Errorf("failed to fetch namespaces: %v", err)
