@@ -128,10 +128,9 @@ func (v *DeploymentRequest) getReplicaSet(name, ns string) (string, error) {
 	}
 	var repName string
 	for _, rep := range reps.Items {
-		for _, owner := range rep.OwnerReferences {
-			if owner.Name == name {
-				repName = rep.Name
-			}
+		repName := v.findInNameOwners(name, rep.OwnerReferences)
+		if repName != "" {
+			return repName, nil
 		}
 	}
 
@@ -146,19 +145,18 @@ func (v *DeploymentRequest) getPods(ns, replicaSetName string) ([]PodInfo, error
 
 	pods := make([]PodInfo, 0)
 	for _, pod := range allPods.Items {
-		for _, owner := range pod.OwnerReferences {
-			if owner.Name == replicaSetName {
-				pod, err := v.ClientSet.CoreV1().Pods(ns).Get(v.Context, pod.Name, metav1.GetOptions{})
-				if err != nil {
-					return nil, logs.Errorf("failed to get pod: %v", err)
-				}
-				podInfo := PodInfo{
-					Name:      pod.Name,
-					Restarts:  pod.Status.ContainerStatuses[0].RestartCount,
-					StartedAt: pod.Status.StartTime.Time,
-				}
-				pods = append(pods, podInfo)
+		podName := v.findInNameOwners(replicaSetName, pod.OwnerReferences)
+		if podName != "" {
+			pod, err := v.ClientSet.CoreV1().Pods(ns).Get(v.Context, pod.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, logs.Errorf("failed to get pod: %v", err)
 			}
+			podInfo := PodInfo{
+				Name:      pod.Name,
+				Restarts:  pod.Status.ContainerStatuses[0].RestartCount,
+				StartedAt: pod.Status.StartTime.Time,
+			}
+			pods = append(pods, podInfo)
 		}
 	}
 
@@ -175,4 +173,13 @@ func (v *DeploymentRequest) getPods(ns, replicaSetName string) ([]PodInfo, error
 
 func (v *DeploymentRequest) getMetrics(info PodInfo) (interface{}, error) {
 	return nil, nil
+}
+
+func (v *DeploymentRequest) findInNameOwners(name string, owners []metav1.OwnerReference) string {
+	for _, owner := range owners {
+		if owner.Name == name {
+			return owner.Name
+		}
+	}
+	return ""
 }

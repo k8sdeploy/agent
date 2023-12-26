@@ -16,7 +16,6 @@ type NamespaceSendResponse struct {
 type NamespaceRequest struct {
 	Clientset *kubernetes.Clientset
 	Context   context.Context
-
 	RequestID string
 	Response  *NamespaceSendResponse
 }
@@ -32,31 +31,35 @@ func (n *NamespaceRequest) SetRequestID(rid string) {
 	n.RequestID = rid
 }
 
-func (n *NamespaceRequest) ProcessRequest(id RequestDetails) error {
+func (n *NamespaceRequest) fetchAllNamespaces() ([]string, error) {
 	namespaces, err := n.Clientset.CoreV1().Namespaces().List(n.Context, metav1.ListOptions{})
 	if err != nil {
-		return logs.Errorf("failed to get namespaces: %v", err)
+		return nil, logs.Errorf("failed to get namespaces: %v", err)
 	}
 
 	ret := make([]string, 0)
 	for _, namespace := range namespaces.Items {
 		ret = append(ret, namespace.Name)
 	}
+	return ret, nil
+}
 
-	n.Response = &NamespaceSendResponse{
-		Namespaces: ret,
+func (n *NamespaceRequest) ProcessRequest(id RequestDetails) error {
+	namespaces, err := n.fetchAllNamespaces()
+	if err != nil {
+		return logs.Errorf("failed to fetch namespaces: %v", err)
 	}
-
+	n.Response = &NamespaceSendResponse{
+		Namespaces: namespaces,
+	}
 	return nil
 }
 
 func (n *NamespaceRequest) GetResponse() (string, error) {
 	n.Response.RequestID = n.RequestID
-
 	jd, err := json.Marshal(n.Response)
 	if err != nil {
 		return "", logs.Errorf("failed to marshal response: %v", err)
 	}
-
 	return string(jd), nil
 }
