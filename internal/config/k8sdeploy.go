@@ -38,6 +38,7 @@ type K8sDeploy struct {
 
 	SelfUpdate   bool   `env:"K8SDEPLOY_SELF_UPDATE" envDefault:"false"`
 	BuildVersion string `env:"BUILD_VERSION" envDefault:""`
+	RabbitHost   string `env:"RABBIT_HOSTNAME" envDefault:"https://queue-api.k8sdeploy.dev"`
 
 	Queues
 	Credentials

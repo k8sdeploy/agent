@@ -51,7 +51,7 @@ func (a *Agent) getMessage(queue string, requeue bool) (string, error) {
 		return "", logs.Errorf("failed to marshal %s payload: %v", queue, err)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/queues/%s/%s/get", a.Config.Rabbit.Host, queue, queue), bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/queues/%s/%s/get", a.Config.K8sDeploy.RabbitHost, queue, queue), bytes.NewBuffer(payload))
 	if err != nil {
 		return "", logs.Errorf("failed to create %s request: %v", queue, err)
 	}

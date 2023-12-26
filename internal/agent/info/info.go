@@ -136,7 +136,7 @@ func (i *Info) SendResponse(cfg *config.Config) error {
 		return logs.Errorf("failed to marshal payload: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/exchanges/%s/amq.default/publish", cfg.Rabbit.Host, cfg.K8sDeploy.Queues.Agent), bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/exchanges/%s/amq.default/publish", cfg.K8sDeploy.RabbitHost, cfg.K8sDeploy.Queues.Agent), bytes.NewBuffer(payload))
 	if err != nil {
 		return logs.Errorf("failed to create request: %v", err)
 	}
