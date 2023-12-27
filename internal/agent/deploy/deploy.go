@@ -27,12 +27,26 @@ type Deployment struct {
 	Response string
 }
 
-type RequestDetails struct {
-	Name         string `json:"name"`
-	Namespace    string `json:"namespace"`
-	ContainerURL string `json:"container_url"`
+type Kube struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}
+
+type Image struct {
 	Hash         string `json:"hash"`
 	Tag          string `json:"tag"`
+	ContainerURL string `json:"container_url"`
+}
+
+type Issuer struct {
+	Service string `json:"service"`
+	Key     string `json:"key"`
+}
+
+type RequestDetails struct {
+	Kube   Kube   `json:"k8s"`
+	Image  Image  `json:"image"`
+	Issuer Issuer `json:"issuer"`
 }
 
 func NewDeployment(cs *kubernetes.Clientset, ctx context.Context) *Deployment {

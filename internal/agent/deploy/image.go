@@ -31,36 +31,44 @@ func (i *ImageRequest) SetRequestID(rid string) {
 	i.RequestID = rid
 }
 
-func (i *ImageRequest) ProcessRequest(details RequestDetails) error {
-	if details.Name == "" {
+func validateImageRequest(details RequestDetails) error {
+	if details.Kube.Name == "" {
 		return logs.Error("name is required")
 	}
 
-	if details.Namespace == "" {
+	if details.Kube.Namespace == "" {
 		return logs.Error("namespace is required")
 	}
 
-	if details.ContainerURL == "" {
+	if details.Image.ContainerURL == "" {
 		return logs.Error("container_url is required")
 	}
 
-	if details.Hash == "" && details.Tag == "" {
+	if details.Image.Hash == "" && details.Image.Tag == "" {
 		return logs.Error("hash or tag is required")
+	}
+
+	return nil
+}
+
+func (i *ImageRequest) ProcessRequest(details RequestDetails) error {
+	if err := validateImageRequest(details); err != nil {
+		return logs.Errorf("failed to validate request: %v", err)
 	}
 
 	i.RequestDetails = details
 
-	deps := i.ClientSet.AppsV1().Deployments(i.RequestDetails.Namespace)
-	deployment, err := deps.Get(i.Context, i.RequestDetails.Name, metav1.GetOptions{})
+	deps := i.ClientSet.AppsV1().Deployments(details.Kube.Namespace)
+	deployment, err := deps.Get(i.Context, details.Kube.Name, metav1.GetOptions{})
 	if err != nil {
 		return logs.Errorf("failed to get deployment: %v", err)
 	}
 
-	if i.RequestDetails.Tag != "" {
-		deployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("%s:%s", i.RequestDetails.ContainerURL, i.RequestDetails.Tag)
+	if details.Image.Tag != "" {
+		deployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("%s:%s", details.Image.ContainerURL, details.Image.Tag)
 	}
-	if i.RequestDetails.Hash != "" {
-		deployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("%s:%s", i.RequestDetails.ContainerURL, i.RequestDetails.Hash)
+	if details.Image.Hash != "" {
+		deployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("%s:%s", details.Image.ContainerURL, details.Image.Hash)
 	}
 
 	_, err = deps.Update(i.Context, deployment, metav1.UpdateOptions{})
