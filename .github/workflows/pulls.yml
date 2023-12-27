@@ -39,7 +39,7 @@ jobs:
       - test
     runs-on: ubuntu-latest
     steps:
-      - uses: k8sdeploy/github-action@main
+      - uses: k8sdeploy/github-action@v1
         with:
           service-name: agent
           service-namespace: k8sdeploy
