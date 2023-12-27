@@ -34,3 +34,15 @@ jobs:
       - uses: fastify/github-action-merge-dependabot@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+  k8sdeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: k8sdeploy/github-action@v1
+        with:
+          service-name: agent
+          service-namespace: k8sdeploy
+          image-hash: ${{ github.sha }}
+          image-tag: ${{ github.ref_name }}
+          k8sdeploy-key: ${{ secrets.K8SDEPLOY_KEY }}
+          k8sdeploy-secret: ${{ secrets.K8SDEPLOY_SECRET }}
+          k8sdeploy-id: ${{ secrets.K8SDEPLOY_ID }}
