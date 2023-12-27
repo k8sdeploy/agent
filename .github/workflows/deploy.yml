@@ -62,6 +62,7 @@ jobs:
           service-name: agent
           service-namespace: k8sdeploy
           image-hash: ${{ github.sha }}
+          release-type: "release"
           image-tag: ${{ steps.meta.outputs.tags }}
           k8sdeploy-key: ${{ secrets.K8SDEPLOY_KEY }}
           k8sdeploy-secret: ${{ secrets.K8SDEPLOY_SECRET }}
