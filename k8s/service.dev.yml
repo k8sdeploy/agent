@@ -2,19 +2,19 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  namespace: k8sdeploy
-  name: k8sdeploy-agent-dev
+  namespace: k8sdeploy-dev
+  name: k8sdeploy-agent
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: k8sdeploy-agent-dev
-  namespace: k8sdeploy
+  name: k8sdeploy-agent
+  namespace: k8sdeploy-dev
 subjects:
   - kind: ServiceAccount
-    name: k8sdeploy-agent-dev
-    namespace: k8sdeploy
+    name: k8sdeploy-agent
+    namespace: k8sdeploy-dev
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -24,10 +24,10 @@ roleRef:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agent-dev
-  namespace: k8sdeploy
+  name: agent
+  namespace: k8sdeploy-dev
   labels:
-    name: agent-dev
+    name: agent
     app: agent
 spec:
   replicas: 2
@@ -37,18 +37,18 @@ spec:
   selector:
     matchLabels:
       app: agent
-      name: agent-dev
+      name: agent
   template:
     metadata:
       labels:
         app: agent
-        name: agent-dev
+        name: agent
     spec:
-      serviceAccountName: k8sdeploy-agent-dev
+      serviceAccountName: k8sdeploy-agent
       imagePullSecrets:
         - name: docker-registry-secret
       containers:
-        - name: agent-dev
+        - name: agent
           image: containers.chewed-k8s.net/k8sdeploy/agent:latest
           imagePullPolicy: Always
           readinessProbe:
