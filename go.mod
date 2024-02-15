@@ -9,8 +9,8 @@ require (
 	github.com/keloran/go-config v0.4.2
 	github.com/keloran/go-healthcheck v1.2.1
 	github.com/keloran/go-probe v1.0.0
-	k8s.io/apimachinery v0.29.1
-	k8s.io/client-go v0.29.1
+	k8s.io/apimachinery v0.29.2
+	k8s.io/client-go v0.29.2
 )
 
 require (
@@ -74,7 +74,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.29.1 // indirect
+	k8s.io/api v0.29.2 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231206194836-bf4651e18aa8 // indirect
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661 // indirect
