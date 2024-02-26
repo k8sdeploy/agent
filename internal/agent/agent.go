@@ -24,8 +24,6 @@ type KubernetesClient struct {
 
 type Agent struct {
 	Config           *config.Config
-	EventClient      *EventClient
-	SelfUpdate       *EventClient
 	KubernetesClient *KubernetesClient
 }
 
@@ -44,25 +42,28 @@ func NewAgent(cfg *config.Config) *Agent {
 
 func (a *Agent) Start() error {
 	errChan := make(chan error)
+	billingTime := 5
 
 	if err := a.connectOrchestrator(); err != nil {
 		return logs.Errorf("failed to connect to orchestrator: %v", err)
 	}
-	if err := a.getKubernetesClient(); err != nil {
+	if err := a.GetKubernetesClient(); err != nil {
 		return logs.Errorf("failed to get kubernetes client: %v", err)
 	}
 	for {
-		// todo dictate this number by billing
-		time.Sleep(10 * time.Second)
+		select {
+		case err := <-errChan:
+			if err != nil {
+				logs.Infof("error in agent loop: %v", err)
+				continue
+			}
+		case <-time.After(time.Duration(billingTime) * time.Second):
+			go a.listenForEvents(errChan)
 
-		go a.listenForEvents(errChan)
-
-		if a.Config.SelfUpdate {
-			go a.listenForSelfUpdate(errChan)
-		}
-
-		if err := <-errChan; err != nil {
-			return logs.Errorf("failed to start agent: %v", err)
+			if a.Config.SelfUpdate {
+				go a.listenForSelfUpdate(errChan)
+			}
+			continue
 		}
 	}
 }
@@ -74,9 +75,9 @@ func (a *Agent) connectOrchestrator() error {
 		CompanyID string `json:"company_id"`
 	}
 	b, err := json.Marshal(&AgentBody{
-		Key:       a.Config.K8sDeploy.Credentials.Key,
-		Secret:    a.Config.K8sDeploy.Credentials.Secret,
-		CompanyID: a.Config.K8sDeploy.Credentials.CompanyID,
+		Key:       a.Config.K8sDeploy.Credentials.Agent.Key,
+		Secret:    a.Config.K8sDeploy.Credentials.Agent.Secret,
+		CompanyID: a.Config.K8sDeploy.Credentials.Agent.CompanyID,
 	})
 	if err != nil {
 		return logs.Errorf("failed to marshal agent body: %v", err)
@@ -94,39 +95,51 @@ func (a *Agent) connectOrchestrator() error {
 		return logs.Error("failed to connect to orchestrator")
 	}
 
-	type AgentChannelDetails struct {
-		Token   string `json:"token"`
-		Channel string `json:"channel"`
+	type QueueName string
+	const (
+		AgentQueue    QueueName = "agent"
+		ResponseQueue QueueName = "response"
+		MasterQueue   QueueName = "master"
+	)
+
+	type Queue struct {
+		Name QueueName `json:"name"`
+		Path string    `json:"path"`
 	}
 
-	type orchestratorResponse struct {
-		Update AgentChannelDetails `json:"update"`
-		Event  AgentChannelDetails `json:"event"`
+	type Credentials struct {
+		Key    string `json:"key"`
+		Secret string `json:"secret"`
 	}
-	defer func() {
-		if err := res.Body.Close(); err != nil {
-			_ = logs.Errorf("failed to close body: %v", err)
+
+	type AgentDetails struct {
+		Credentials Credentials `json:"credentials"`
+		Queues      []Queue     `json:"queues"`
+	}
+
+	var agentDetails AgentDetails
+	if err := json.NewDecoder(res.Body).Decode(&agentDetails); err != nil {
+		return logs.Errorf("failed to decode agent details: %v", err)
+	}
+
+	a.Config.K8sDeploy.Credentials.Queue.Key = agentDetails.Credentials.Key
+	a.Config.K8sDeploy.Credentials.Queue.Secret = agentDetails.Credentials.Secret
+
+	for _, queue := range agentDetails.Queues {
+		switch queue.Name {
+		case AgentQueue:
+			a.Config.K8sDeploy.Queues.Agent = queue.Path
+		case ResponseQueue:
+			a.Config.K8sDeploy.Queues.Response = queue.Path
+		case MasterQueue:
+			a.Config.K8sDeploy.Queues.Master = queue.Path
 		}
-	}()
-	var resp orchestratorResponse
-	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
-		return logs.Errorf("failed to decode response: %v", err)
-	}
-	a.EventClient = &EventClient{
-		ID:    resp.Event.Channel,
-		Token: resp.Event.Token,
-		Name:  "eventChannel",
-	}
-	a.SelfUpdate = &EventClient{
-		ID:    resp.Update.Channel,
-		Token: resp.Update.Token,
-		Name:  "updateChannel",
 	}
 
 	return nil
 }
 
-func (a *Agent) getKubernetesClient() error {
+func (a *Agent) GetKubernetesClient() error {
 	// get kubernetes config
 	if a.Config.Development {
 		cfgPath := filepath.Join(homedir.HomeDir(), ".kube", "config")

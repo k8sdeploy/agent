@@ -2,7 +2,6 @@ package config
 
 import (
 	"github.com/bugfixes/go-bugfixes/logs"
-	"github.com/caarlos0/env/v6"
 	ConfigBuilder "github.com/keloran/go-config"
 )
 
@@ -13,10 +12,6 @@ type Config struct {
 
 func Build(buildVersion string) (*Config, error) {
 	cfg := &Config{}
-
-	if err := env.Parse(cfg); err != nil {
-		return nil, logs.Errorf("env: %v", err)
-	}
 
 	if err := BuildK8sDeploy(cfg); err != nil {
 		return nil, logs.Errorf("k8sdeploy: %v", err)

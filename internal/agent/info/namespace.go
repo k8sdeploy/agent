@@ -2,50 +2,36 @@ package info
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"github.com/bugfixes/go-bugfixes/logs"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-const (
-	namespaceRequestType = "namespaces"
-)
-
 type NamespaceSendResponse struct {
+	RequestID  string   `json:"request_id"`
 	Namespaces []string `json:"namespaces"`
 }
 
 type NamespaceRequest struct {
-	InfoType  string `json:"info_type"`
 	Clientset *kubernetes.Clientset
 	Context   context.Context
+	RequestID string
+	Response  *NamespaceSendResponse
 }
 
-func NewNamespaces(clientset *kubernetes.Clientset, ctx context.Context) *NamespaceRequest {
+func NewNamespaces(cs *kubernetes.Clientset, ctx context.Context) *NamespaceRequest {
 	return &NamespaceRequest{
-		InfoType:  namespaceRequestType,
-		Clientset: clientset,
+		Clientset: cs,
 		Context:   ctx,
 	}
 }
 
-func (n *NamespaceRequest) ParseRequest(msgMap map[string]interface{}) error {
-	return nil
+func (n *NamespaceRequest) SetRequestID(rid string) {
+	n.RequestID = rid
 }
 
-func (n *NamespaceRequest) SendResponse() error {
-	rs, err := n.getNamespaces()
-	if err != nil {
-		return logs.Errorf("failed to get namespaces: %v", err)
-	}
-	fmt.Printf("%+v\n", rs)
-
-	return nil
-}
-
-func (n *NamespaceRequest) getNamespaces() (*NamespaceSendResponse, error) {
+func (n *NamespaceRequest) FetchAllNamespaces() ([]string, error) {
 	namespaces, err := n.Clientset.CoreV1().Namespaces().List(n.Context, metav1.ListOptions{})
 	if err != nil {
 		return nil, logs.Errorf("failed to get namespaces: %v", err)
@@ -55,8 +41,25 @@ func (n *NamespaceRequest) getNamespaces() (*NamespaceSendResponse, error) {
 	for _, namespace := range namespaces.Items {
 		ret = append(ret, namespace.Name)
 	}
+	return ret, nil
+}
 
-	return &NamespaceSendResponse{
-		Namespaces: ret,
-	}, nil
+func (n *NamespaceRequest) ProcessRequest(id *RequestDetails) error {
+	namespaces, err := n.FetchAllNamespaces()
+	if err != nil {
+		return logs.Errorf("failed to fetch namespaces: %v", err)
+	}
+	n.Response = &NamespaceSendResponse{
+		Namespaces: namespaces,
+	}
+	return nil
+}
+
+func (n *NamespaceRequest) GetResponse() (string, error) {
+	n.Response.RequestID = n.RequestID
+	jd, err := json.Marshal(n.Response)
+	if err != nil {
+		return "", logs.Errorf("failed to marshal response: %v", err)
+	}
+	return string(jd), nil
 }

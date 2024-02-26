@@ -1,1 +1,3 @@
+k8s/secret.ymlhttp-client.private.env.json
+queue_client/http-client.private.env.json
 k8s/secret.yml
