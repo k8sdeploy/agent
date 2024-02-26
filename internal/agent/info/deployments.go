@@ -20,6 +20,9 @@ type DeploymentsRequest struct {
 type DeploymentInfo struct {
 	Name      string `json:"name"`
 	Container string `json:"container"`
+
+	ReadyReplicas int32 `json:"ready_replicas"`
+	Replicas      int32 `json:"replicas"`
 }
 type DeploymentsSendResponse struct {
 	RequestID   string           `json:"request_id"`

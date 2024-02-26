@@ -8,7 +8,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"strings"
-	"time"
 )
 
 type DeploymentRequest struct {
@@ -37,13 +36,6 @@ type DeploymentResponse struct {
 	Version   string    `json:"version"`
 	Replicas  Replicas  `json:"replicas"`
 	Pods      []PodInfo `json:"pods"`
-}
-
-type PodInfo struct {
-	Name      string      `json:"name"`
-	Restarts  int32       `json:"restarts"`
-	StartedAt time.Time   `json:"started_at"`
-	Metrics   interface{} `json:"metrics"`
 }
 
 func NewDeployment(cs *kubernetes.Clientset, ctx context.Context) *DeploymentRequest {

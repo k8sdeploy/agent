@@ -47,7 +47,7 @@ func (a *Agent) Start() error {
 	if err := a.connectOrchestrator(); err != nil {
 		return logs.Errorf("failed to connect to orchestrator: %v", err)
 	}
-	if err := a.getKubernetesClient(); err != nil {
+	if err := a.GetKubernetesClient(); err != nil {
 		return logs.Errorf("failed to get kubernetes client: %v", err)
 	}
 	for {
@@ -139,7 +139,7 @@ func (a *Agent) connectOrchestrator() error {
 	return nil
 }
 
-func (a *Agent) getKubernetesClient() error {
+func (a *Agent) GetKubernetesClient() error {
 	// get kubernetes config
 	if a.Config.Development {
 		cfgPath := filepath.Join(homedir.HomeDir(), ".kube", "config")

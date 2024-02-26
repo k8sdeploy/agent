@@ -31,7 +31,7 @@ func (n *NamespaceRequest) SetRequestID(rid string) {
 	n.RequestID = rid
 }
 
-func (n *NamespaceRequest) fetchAllNamespaces() ([]string, error) {
+func (n *NamespaceRequest) FetchAllNamespaces() ([]string, error) {
 	namespaces, err := n.Clientset.CoreV1().Namespaces().List(n.Context, metav1.ListOptions{})
 	if err != nil {
 		return nil, logs.Errorf("failed to get namespaces: %v", err)
@@ -45,7 +45,7 @@ func (n *NamespaceRequest) fetchAllNamespaces() ([]string, error) {
 }
 
 func (n *NamespaceRequest) ProcessRequest(id *RequestDetails) error {
-	namespaces, err := n.fetchAllNamespaces()
+	namespaces, err := n.FetchAllNamespaces()
 	if err != nil {
 		return logs.Errorf("failed to fetch namespaces: %v", err)
 	}
