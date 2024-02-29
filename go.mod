@@ -8,7 +8,7 @@ require (
 	github.com/bugfixes/go-bugfixes v0.10.0
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/go-chi/chi/v5 v5.0.12
-	github.com/keloran/go-config v0.4.3
+	github.com/keloran/go-config v0.4.4
 	github.com/keloran/go-healthcheck v1.2.2
 	github.com/keloran/go-probe v1.0.0
 	k8s.io/apimachinery v0.29.2
