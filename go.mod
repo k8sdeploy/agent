@@ -7,7 +7,7 @@ toolchain go1.22.0
 require (
 	github.com/bugfixes/go-bugfixes v0.12.18
 	github.com/caarlos0/env/v6 v6.10.1
-	github.com/go-chi/chi/v5 v5.0.12
+	github.com/go-chi/chi/v5 v5.0.13
 	github.com/keloran/go-config v0.5.4
 	github.com/keloran/go-healthcheck v1.2.2
 	github.com/keloran/go-probe v1.0.0
